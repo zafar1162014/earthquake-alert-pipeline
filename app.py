@@ -5,13 +5,14 @@ from pathlib import Path
 import pandas as pd
 from flask import Flask, jsonify, render_template, send_file
 
-# =========================
-# Configuration
-# =========================
+# =============================
+# EarthquakeWatch Configuration
+# =============================
 BASE_DIR = Path(__file__).resolve().parent
 CSV_PATH = BASE_DIR / "data" / "earthquakes.csv"
 OUTPUT_DIR = BASE_DIR / "output"
 SPEEDUP_CHART_PATH = OUTPUT_DIR / "speedup_chart.png"
+APP_NAME = "EarthquakeWatch"
 
 app = Flask(__name__)
 
@@ -48,17 +49,6 @@ def classify_alert(magnitude: float) -> str:
     return "LOW"
 
 
-def magnitude_ranges(dataframe: pd.DataFrame) -> pd.Series:
-    categories = pd.cut(
-        dataframe["mag"],
-        bins=[-float("inf"), 2, 4, 6, 8, float("inf")],
-        labels=["Minor", "Light", "Moderate", "Strong", "Major"],
-        right=False,
-    )
-    counts = categories.value_counts().reindex(["Minor", "Light", "Moderate", "Strong", "Major"], fill_value=0)
-    return counts
-
-
 def hotspot_table(dataframe: pd.DataFrame, top_n: int) -> list[dict]:
     hotspots = (
         dataframe.dropna(subset=["latitude", "longitude"])
@@ -85,6 +75,24 @@ def hotspot_table(dataframe: pd.DataFrame, top_n: int) -> list[dict]:
     return result
 
 
+def serialize_earthquakes(dataframe: pd.DataFrame) -> list[dict]:
+    response: list[dict] = []
+    for _, row in dataframe.iterrows():
+        response.append(
+            {
+                "time": row["time"].isoformat() if pd.notna(row["time"]) else None,
+                "latitude": float(row["latitude"]) if pd.notna(row["latitude"]) else None,
+                "longitude": float(row["longitude"]) if pd.notna(row["longitude"]) else None,
+                "depth": float(row["depth"]) if pd.notna(row["depth"]) else None,
+                "mag": float(row["mag"]) if pd.notna(row["mag"]) else None,
+                "place": row["place"] if pd.notna(row["place"]) else None,
+                "region": row["region"] if pd.notna(row["region"]) else None,
+                "alert_level": classify_alert(row["mag"]),
+            }
+        )
+    return response
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -98,83 +106,65 @@ def api_summary():
         pakistan_eq = int((dataframe["region"] == "Pakistan").sum())
         critical_count = int((dataframe["mag"] > 6.0).sum())
         high_count = int(((dataframe["mag"] > 5.0) & (dataframe["mag"] <= 6.0)).sum())
+        avg_mag = float(dataframe["mag"].mean()) if not dataframe["mag"].dropna().empty else 0.0
+        max_mag = float(dataframe["mag"].max()) if not dataframe["mag"].dropna().empty else 0.0
 
         return jsonify(
             {
+                "app_name": APP_NAME,
                 "total_earthquakes": total_eq,
-                "total_pakistan_earthquakes": pakistan_eq,
-                "total_critical_alerts": critical_count,
-                "total_high_alerts": high_count,
+                "pakistan_count": pakistan_eq,
+                "critical_count": critical_count,
+                "high_count": high_count,
+                "average_magnitude": round(avg_mag, 2),
+                "max_magnitude": round(max_mag, 2),
             }
         )
     except Exception as error:  # noqa: BLE001
         return jsonify({"error": str(error)}), 500
 
 
-@app.route("/api/magnitude-chart")
-def api_magnitude_chart():
+@app.route("/api/earthquakes")
+def api_earthquakes():
     try:
         dataframe = load_data()
-        counts = magnitude_ranges(dataframe)
-
-        return jsonify(
-            {
-                "labels": ["Minor", "Light", "Moderate", "Strong", "Major"],
-                "counts": [int(counts[label]) for label in ["Minor", "Light", "Moderate", "Strong", "Major"]],
-            }
-        )
+        return jsonify({"earthquakes": serialize_earthquakes(dataframe)})
     except Exception as error:  # noqa: BLE001
         return jsonify({"error": str(error)}), 500
 
 
-@app.route("/api/pakistan-hotspots")
-def api_pakistan_hotspots():
+@app.route("/api/hotspots")
+def api_hotspots():
     try:
         dataframe = load_data()
-        pakistan_df = dataframe[dataframe["region"] == "Pakistan"]
-        return jsonify({"hotspots": hotspot_table(pakistan_df, top_n=10)})
+        return jsonify({"hotspots": hotspot_table(dataframe, top_n=20)})
     except Exception as error:  # noqa: BLE001
         return jsonify({"error": str(error)}), 500
 
 
-@app.route("/api/global-hotspots")
-def api_global_hotspots():
+@app.route("/api/pakistan")
+def api_pakistan():
     try:
         dataframe = load_data()
-        global_df = dataframe[dataframe["region"] != "Pakistan"]
-        return jsonify({"hotspots": hotspot_table(global_df, top_n=10)})
+        pakistan_df = dataframe[dataframe["region"] == "Pakistan"].copy()
+        pakistan_df = pakistan_df.sort_values("time", ascending=False)
+        return jsonify({"earthquakes": serialize_earthquakes(pakistan_df)})
     except Exception as error:  # noqa: BLE001
         return jsonify({"error": str(error)}), 500
 
 
-@app.route("/api/recent-alerts")
-def api_recent_alerts():
+@app.route("/api/recent")
+def api_recent():
     try:
         dataframe = load_data()
-        alerts = dataframe[dataframe["mag"] > 4.0].copy()
-        alerts["alert_level"] = alerts["mag"].apply(classify_alert)
-        alerts = alerts.sort_values("time", ascending=False).head(50)
-
-        response = []
-        for _, row in alerts.iterrows():
-            response.append(
-                {
-                    "time": row["time"].isoformat() if pd.notna(row["time"]) else None,
-                    "place": row["place"],
-                    "mag": float(row["mag"]) if pd.notna(row["mag"]) else None,
-                    "depth": float(row["depth"]) if pd.notna(row["depth"]) else None,
-                    "region": row["region"],
-                    "alert_level": row["alert_level"],
-                }
-            )
-
-        return jsonify({"alerts": response})
+        recent_df = dataframe.sort_values("time", ascending=False).head(100)
+        return jsonify({"earthquakes": serialize_earthquakes(recent_df)})
     except Exception as error:  # noqa: BLE001
         return jsonify({"error": str(error)}), 500
 
 
-@app.route("/api/speedup-chart")
-def api_speedup_chart():
+@app.route("/api/speedup")
+def api_speedup():
     if not SPEEDUP_CHART_PATH.exists():
         return jsonify({"error": f"Speedup chart not found: {SPEEDUP_CHART_PATH}"}), 404
     return send_file(SPEEDUP_CHART_PATH, mimetype="image/png")
