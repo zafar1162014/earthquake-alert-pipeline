@@ -1,928 +1,1183 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EarthquakeWatch | Powered by Hadoop and Apache Spark</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.min.js"></script>
-  <style>
-    :root {
-      --bg: #0a0e1a;
-      --panel: #0d1117;
-      --blue: #00d4ff;
-      --red: #ff4444;
-      --orange: #ff8800;
-      --green: #00ff88;
-      --white: #ffffff;
-      --yellow: #ffd54a;
-    }
-
-    html, body {
-      background: var(--bg);
-      color: var(--white);
-      font-family: 'Rajdhani', sans-serif;
-      scroll-behavior: smooth;
-    }
-
-    h1, h2, h3, h4, h5, .navbar-brand {
-      font-family: 'Orbitron', sans-serif;
-      letter-spacing: 0.8px;
-    }
-
-    .dashboard-section {
-      background: linear-gradient(180deg, rgba(13, 17, 23, 0.95), rgba(10, 14, 26, 0.95));
-      border: 1px solid rgba(0, 212, 255, 0.18);
-      border-radius: 14px;
-      padding: 1rem;
-      box-shadow: 0 0 14px rgba(0, 212, 255, 0.11);
-      transition: all 0.4s ease;
-    }
-
-    .dashboard-section:hover {
-      box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
-    }
-
-    .nav-fixed {
-      position: fixed;
-      top: 0;
-      width: 100%;
-      z-index: 1100;
-      background: #0d1117;
-      border-bottom: 1px solid rgba(0, 212, 255, 0.2);
-    }
-
-    .main-content {
-      margin-top: 90px;
-      padding-bottom: 70px;
-    }
-
-    .pulse-dot {
-      width: 10px;
-      height: 10px;
-      display: inline-block;
-      background: var(--red);
-      border-radius: 50%;
-      box-shadow: 0 0 0 rgba(255, 68, 68, 0.5);
-      animation: pulse 1.2s infinite;
-    }
-
-    .live-badge {
-      background: rgba(0, 255, 136, 0.15);
-      color: var(--green);
-      border: 1px solid var(--green);
-      animation: blink 1s infinite;
-    }
-
-    .hero {
-      text-align: center;
-      padding: 2rem 0 1rem;
-    }
-
-    .hero h1 {
-      font-size: clamp(2rem, 5vw, 3.8rem);
-      color: var(--blue);
-      text-shadow: 0 0 16px rgba(0, 212, 255, 0.7);
-      margin-bottom: 0.5rem;
-    }
-
-    .hero-sub {
-      font-size: 1.1rem;
-      color: #d8ecff;
-    }
-
-    .hero-line {
-      width: 240px;
-      max-width: 75%;
-      height: 2px;
-      margin: 10px auto 0;
-      background: linear-gradient(90deg, transparent, var(--blue), transparent);
-      animation: scan 2.8s infinite;
-    }
-
-    .summary-card {
-      text-align: center;
-      background: rgba(8, 12, 22, 0.9);
-      border-radius: 12px;
-      border: 1px solid rgba(0, 212, 255, 0.32);
-      box-shadow: 0 0 16px rgba(0, 212, 255, 0.18);
-      padding: 1rem;
-      transition: transform 0.3s ease;
-      min-height: 170px;
-    }
-
-    .summary-card:hover { transform: translateY(-4px); }
-    .summary-card.critical { box-shadow: 0 0 18px rgba(255, 68, 68, 0.5); animation: pulseCritical 1.8s infinite; }
-    .summary-icon { font-size: 1.8rem; margin-bottom: 0.2rem; }
-    .summary-value { font-size: 2rem; font-weight: 700; }
-
-    #globeContainer {
-      position: relative;
-      width: 100%;
-      height: 500px;
-      border-radius: 12px;
-      overflow: hidden;
-      background: radial-gradient(circle at 40% 20%, rgba(0, 80, 140, 0.25), rgba(4, 8, 20, 0.95));
-      border: 1px solid rgba(0, 212, 255, 0.25);
-    }
-
-    #globeTooltip {
-      position: absolute;
-      display: none;
-      pointer-events: none;
-      background: rgba(13, 17, 23, 0.95);
-      color: var(--white);
-      border: 1px solid rgba(0, 212, 255, 0.35);
-      border-radius: 8px;
-      padding: 6px 8px;
-      font-size: 0.86rem;
-      z-index: 10;
-      white-space: nowrap;
-    }
-
-    #earthquakeMap {
-      height: 450px;
-      border-radius: 10px;
-      border: 1px solid rgba(0, 212, 255, 0.22);
-    }
-
-    .leaflet-popup-content-wrapper,
-    .leaflet-popup-tip {
-      background: #0d1117;
-      color: #fff;
-      border: 1px solid rgba(0, 212, 255, 0.3);
-    }
-
-    .map-title-overlay {
-      position: absolute;
-      top: 12px;
-      left: 12px;
-      z-index: 500;
-      background: rgba(10, 14, 26, 0.85);
-      border: 1px solid rgba(0, 212, 255, 0.4);
-      border-radius: 8px;
-      padding: 6px 10px;
-      font-weight: 700;
-      color: var(--blue);
-    }
-
-    .table-dark-custom {
-      background: rgba(13, 17, 23, 0.95);
-      border-radius: 10px;
-      overflow: hidden;
-    }
-
-    .table-dark-custom table,
-    .table-dark-custom th,
-    .table-dark-custom td {
-      color: #fff;
-      background: transparent !important;
-      border-color: rgba(255, 255, 255, 0.08);
-    }
-
-    .row-critical { border-left: 4px solid var(--red); background: rgba(255, 68, 68, 0.08) !important; animation: blink 1.4s infinite; }
-    .row-high { border-left: 4px solid var(--orange); }
-    .row-medium { border-left: 4px solid var(--yellow); }
-    .row-low { border-left: 4px solid var(--green); }
-
-    .badge-level { border-radius: 999px; padding: 0.25rem 0.6rem; font-weight: 700; }
-    .badge-critical { background: rgba(255, 68, 68, 0.25); color: var(--red); border: 1px solid var(--red); }
-    .badge-high { background: rgba(255, 136, 0, 0.22); color: var(--orange); border: 1px solid var(--orange); }
-    .badge-medium { background: rgba(255, 213, 74, 0.2); color: var(--yellow); border: 1px solid var(--yellow); }
-    .badge-low { background: rgba(0, 255, 136, 0.2); color: var(--green); border: 1px solid var(--green); }
-
-    .footer-tech .badge { margin-right: 8px; margin-top: 4px; }
-
-    .loading-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(10, 14, 26, 0.97);
-      z-index: 2000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-    }
-
-    .loading-overlay.hide { display: none; }
-    .loading-spinner { width: 70px; height: 70px; border: 4px solid rgba(255, 255, 255, 0.1); border-top: 4px solid var(--blue); border-radius: 50%; animation: spin 1s linear infinite; }
-
-    .scroll-top {
-      position: fixed;
-      bottom: 22px;
-      right: 18px;
-      z-index: 1200;
-      display: none;
-    }
-
-    .sort-link { cursor: pointer; user-select: none; }
-    .sort-arrow { font-size: 0.7rem; opacity: 0.65; margin-left: 4px; }
-    .bell-shake { animation: shake 0.8s linear; }
-
-    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.6);} 100% { box-shadow: 0 0 0 14px rgba(255, 68, 68, 0);} }
-    @keyframes pulseCritical { 0% { box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);} 50% { box-shadow: 0 0 22px rgba(255, 68, 68, 0.8);} 100% { box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);} }
-    @keyframes blink { 50% { opacity: 0.5; } }
-    @keyframes scan { 0% { transform: scaleX(0.2); opacity: 0.2;} 50% { transform: scaleX(1); opacity: 1;} 100% { transform: scaleX(0.2); opacity: 0.2;} }
-    @keyframes spin { to { transform: rotate(360deg);} }
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      20% { transform: translateX(-2px); }
-      40% { transform: translateX(2px); }
-      60% { transform: translateX(-2px); }
-      80% { transform: translateX(2px); }
-    }
-  </style>
-</head>
-<body>
-  <div id="loadingOverlay" class="loading-overlay">
-    <div class="loading-spinner mb-3"></div>
-    <h3 class="text-info mb-0">EarthquakeWatch</h3>
-    <small>Loading real-time disaster dashboard...</small>
-  </div>
-
-  <nav class="navbar nav-fixed navbar-dark px-3">
-    <div class="d-flex align-items-center">
-      <span class="navbar-brand mb-0">🌍 EarthquakeWatch</span>
-      <span class="pulse-dot ms-2"></span>
-      <span class="d-block text-light-emphasis ms-3" style="font-size:0.82rem;">Real-Time Disaster Alert Pipeline — Pakistan and Global Monitor</span>
-    </div>
-    <div class="d-flex align-items-center gap-2">
-      <span id="clockNow" class="small text-info"></span>
-      <span class="badge live-badge">LIVE</span>
-      <a href="https://github.com/zafar1162014/earthquake-alert-pipeline" target="_blank" rel="noopener noreferrer" class="btn btn-outline-info btn-sm">
-        <i class="bi bi-github"></i>
-      </a>
-    </div>
-  </nav>
-
-  <main class="container-fluid main-content">
-    <section class="hero">
-      <h1>EarthquakeWatch</h1>
-      <p class="hero-sub mb-1">Real-Time Disaster Alert Pipeline — Pakistan and Global Monitor</p>
-      <div class="hero-line"></div>
-    </section>
-
-    <section class="row g-3 mb-3">
-      <div class="col-12 col-md-6 col-xl-3">
-        <div class="summary-card">
-          <div class="summary-icon text-info"><i class="bi bi-globe-asia-australia"></i></div>
-          <div id="cardTotal" class="summary-value">0</div>
-          <small>Total Earthquakes</small>
-        </div>
-      </div>
-      <div class="col-12 col-md-6 col-xl-3">
-        <div class="summary-card" style="box-shadow:0 0 18px rgba(0,255,136,0.35)">
-          <div class="summary-icon" style="color:var(--green)"><i class="bi bi-geo-alt-fill"></i></div>
-          <div id="cardPakistan" class="summary-value">0</div>
-          <small>Pakistan Earthquakes</small>
-        </div>
-      </div>
-      <div class="col-12 col-md-6 col-xl-3">
-        <div class="summary-card critical">
-          <div class="summary-icon text-danger"><i class="bi bi-exclamation-triangle-fill"></i></div>
-          <div id="cardCritical" class="summary-value">0</div>
-          <small>Critical Alerts</small>
-        </div>
-      </div>
-      <div class="col-12 col-md-6 col-xl-3">
-        <div class="summary-card" style="box-shadow:0 0 18px rgba(255,136,0,0.35)">
-          <div class="summary-icon" style="color:var(--orange)"><i class="bi bi-exclamation-circle-fill"></i></div>
-          <div id="cardHigh" class="summary-value">0</div>
-          <small>High Alerts</small>
-        </div>
-      </div>
-    </section>
-
-    <section class="dashboard-section mb-3">
-      <h4 class="mb-3 text-info">EarthquakeWatch Global 3D View</h4>
-      <div id="globeContainer">
-        <div id="globeTooltip"></div>
-      </div>
-    </section>
-
-    <section class="dashboard-section mb-3">
-      <h5 class="mb-3 text-info"><i class="bi bi-bell-fill me-2"></i>Set Your Location Alert <span id="criticalBell" class="ms-2"><i class="bi bi-bell"></i> <span id="criticalBadge" class="badge bg-danger">0</span></span></h5>
-      <div class="row g-3 align-items-end">
-        <div class="col-12 col-lg-4">
-          <label class="form-label">Select Region</label>
-          <select id="regionSelect" class="form-select bg-dark text-light border-info">
-            <option>All Regions</option>
-            <option>Pakistan</option>
-            <option>Afghanistan</option>
-            <option>India</option>
-            <option>Iran</option>
-            <option>Turkey</option>
-            <option>Indonesia</option>
-            <option>Japan</option>
-            <option>Chile</option>
-            <option>USA</option>
-            <option>Philippines</option>
-          </select>
-        </div>
-        <div class="col-12 col-lg-3">
-          <label class="form-label">Minimum Magnitude: <span id="minMagValue">4.0</span></label>
-          <input type="range" min="1" max="9" step="0.1" value="4" id="minMag" class="form-range" />
-        </div>
-        <div class="col-12 col-lg-3">
-          <label class="form-label">Alert Radius km: <span id="radiusValue">500</span></label>
-          <input type="range" min="100" max="2000" step="100" value="500" id="alertRadius" class="form-range" />
-        </div>
-        <div class="col-12 col-lg-2">
-          <button id="setAlertBtn" class="btn btn-info w-100 fw-bold">Set Alert</button>
-        </div>
-      </div>
-    </section>
-
-    <section class="dashboard-section mb-3 position-relative">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <h5 class="text-info mb-0">Live Earthquake Map</h5>
-        <button id="mapToggleBtn" class="btn btn-outline-info btn-sm">Pakistan Only</button>
-      </div>
-      <div class="map-title-overlay">EarthquakeWatch Live Map</div>
-      <div id="earthquakeMap"></div>
-    </section>
-
-    <section class="row g-3 mb-3">
-      <div class="col-12 col-lg-4">
-        <div class="dashboard-section h-100">
-          <h6 class="text-info">Magnitude Distribution</h6>
-          <canvas id="chartMagnitude" height="240"></canvas>
-        </div>
-      </div>
-      <div class="col-12 col-lg-4">
-        <div class="dashboard-section h-100">
-          <h6 class="text-info">Alert Level Breakdown</h6>
-          <canvas id="chartAlerts" height="240"></canvas>
-        </div>
-      </div>
-      <div class="col-12 col-lg-4">
-        <div class="dashboard-section h-100">
-          <h6 class="text-info">Earthquake Frequency Over Time</h6>
-          <canvas id="chartFrequency" height="240"></canvas>
-        </div>
-      </div>
-    </section>
-
-    <section class="dashboard-section mb-3 table-dark-custom">
-      <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
-        <h5 class="text-info mb-0">Recent Earthquake Alerts <span id="visibleCount" class="badge bg-info text-dark">0</span></h5>
-        <input id="searchInput" class="form-control form-control-sm w-auto bg-dark text-light border-info" placeholder="Search by location..." />
-      </div>
-      <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0" id="alertsTable">
-          <thead>
-            <tr>
-              <th class="sort-link" data-key="time">Time <span class="sort-arrow">↕</span></th>
-              <th class="sort-link" data-key="place">Location <span class="sort-arrow">↕</span></th>
-              <th class="sort-link" data-key="mag">Magnitude <span class="sort-arrow">↕</span></th>
-              <th class="sort-link" data-key="depth">Depth km <span class="sort-arrow">↕</span></th>
-              <th class="sort-link" data-key="region">Region <span class="sort-arrow">↕</span></th>
-              <th class="sort-link" data-key="alert_level">Alert Level <span class="sort-arrow">↕</span></th>
-            </tr>
-          </thead>
-          <tbody id="alertsTbody"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="dashboard-section mb-3 text-center">
-      <h5 class="text-info">Parallel Processing Benchmark — Amdahl Law Validation</h5>
-      <p class="small text-light-emphasis">Empirical validation of Amdahl Law using Apache Spark on 1, 2, and 4 cores.</p>
-      <img id="speedupImage" src="/api/speedup" class="img-fluid rounded border border-info" style="max-width:800px;" alt="Amdahl Speedup Chart" />
-      <p class="small mt-3 mb-0">This chart compares actual Spark parallel speedup against theoretical Amdahl Law prediction with parallelizable fraction P equals 0.85.</p>
-    </section>
-  </main>
-
-  <footer class="py-3 px-3" style="background:#0d1117; border-top:1px solid rgba(0,212,255,0.25)">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-      <div>
-        <strong>EarthquakeWatch</strong> — Real-Time Disaster Alert Pipeline
-        <a href="https://github.com/zafar1162014/earthquake-alert-pipeline" target="_blank" rel="noopener noreferrer" class="text-info text-decoration-none ms-2"><i class="bi bi-github"></i> GitHub</a>
-      </div>
-      <div class="footer-tech">
-        <span class="badge bg-primary">Hadoop</span>
-        <span class="badge bg-warning text-dark">Apache Spark</span>
-        <span class="badge bg-success">Python</span>
-        <span class="badge bg-info text-dark">Flask</span>
-      </div>
-      <div>Last refresh: <span id="lastRefresh">-</span></div>
-    </div>
-  </footer>
-
-  <button id="scrollTopBtn" class="btn btn-info scroll-top"><i class="bi bi-arrow-up"></i></button>
-
-  <script>
-    const COLORS = {
-      CRITICAL: '#ff4444',
-      HIGH: '#ff8800',
-      MEDIUM: '#ffd54a',
-      LOW: '#00ff88'
-    };
-
-    const state = {
-      all: [],
-      filtered: [],
-      mapOnlyPakistan: false,
-      sort: { key: 'time', dir: 'desc' }
-    };
-
-    let map;
-    let mapLayer;
-    let chartMagnitude;
-    let chartAlerts;
-    let chartFrequency;
-    let scene;
-    let camera;
-    let renderer;
-    let globe;
-    let quakeGroup;
-    let raycaster;
-    let mouse;
-    let rotating = true;
-    let dragging = false;
-    let lastPos = { x: 0, y: 0 };
-
-    function nowText() {
-      return new Date().toLocaleString();
-    }
-
-    function setClock() {
-      document.getElementById('clockNow').textContent = nowText();
-    }
-
-    function alertLevel(mag) {
-      if (mag > 6) return 'CRITICAL';
-      if (mag > 5) return 'HIGH';
-      if (mag > 4) return 'MEDIUM';
-      return 'LOW';
-    }
-
-    async function getJSON(url) {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Request failed ${url} (${response.status})`);
-      }
-      return response.json();
-    }
-
-    function animateCount(id, endValue) {
-      const el = document.getElementById(id);
-      const duration = 900;
-      const start = performance.now();
-      const from = Number(el.dataset.last || 0);
-      function frame(t) {
-        const p = Math.min((t - start) / duration, 1);
-        const value = Math.round(from + (endValue - from) * p);
-        el.textContent = value.toLocaleString();
-        if (p < 1) requestAnimationFrame(frame);
-      }
-      el.dataset.last = endValue;
-      requestAnimationFrame(frame);
-    }
-
-    function latLonToXYZ(lat, lon, radius) {
-      const phi = (90 - lat) * (Math.PI / 180);
-      const theta = (lon + 180) * (Math.PI / 180);
-      const x = -radius * Math.sin(phi) * Math.cos(theta);
-      const y = radius * Math.cos(phi);
-      const z = radius * Math.sin(phi) * Math.sin(theta);
-      return { x, y, z };
-    }
-
-    function initGlobe() {
-      const container = document.getElementById('globeContainer');
-      const width = container.clientWidth;
-      const height = container.clientHeight;
-      scene = new THREE.Scene();
-      camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-      camera.position.set(0, 0, 8);
-
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-      renderer.setSize(width, height);
-      container.appendChild(renderer.domElement);
-
-      const starGeo = new THREE.BufferGeometry();
-      const starCount = 900;
-      const starPositions = [];
-      for (let i = 0; i < starCount; i++) {
-        starPositions.push((Math.random() - 0.5) * 120, (Math.random() - 0.5) * 120, (Math.random() - 0.5) * 120);
-      }
-      starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3));
-      const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.08 }));
-      scene.add(stars);
-
-      const ambient = new THREE.AmbientLight(0x88aacc, 0.8);
-      scene.add(ambient);
-      const light = new THREE.DirectionalLight(0x00d4ff, 1.1);
-      light.position.set(5, 4, 8);
-      scene.add(light);
-
-      const sphereGeometry = new THREE.SphereGeometry(2.4, 64, 64);
-      const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0x0a2a4a, roughness: 0.9, metalness: 0.15 });
-      globe = new THREE.Mesh(sphereGeometry, sphereMaterial);
-      scene.add(globe);
-
-      quakeGroup = new THREE.Group();
-      scene.add(quakeGroup);
-      raycaster = new THREE.Raycaster();
-      mouse = new THREE.Vector2();
-
-      container.addEventListener('mousedown', (event) => {
-        dragging = true;
-        rotating = false;
-        lastPos = { x: event.clientX, y: event.clientY };
-      });
-      window.addEventListener('mouseup', () => {
-        dragging = false;
-        rotating = true;
-      });
-      window.addEventListener('mousemove', (event) => {
-        if (dragging) {
-          const dx = event.clientX - lastPos.x;
-          const dy = event.clientY - lastPos.y;
-          globe.rotation.y += dx * 0.004;
-          globe.rotation.x += dy * 0.002;
-          quakeGroup.rotation.y += dx * 0.004;
-          quakeGroup.rotation.x += dy * 0.002;
-          lastPos = { x: event.clientX, y: event.clientY };
-        }
-      });
-      container.addEventListener('wheel', (event) => {
-        event.preventDefault();
-        camera.position.z = Math.min(14, Math.max(4.2, camera.position.z + event.deltaY * 0.01));
-      }, { passive: false });
-
-      container.addEventListener('mousemove', (event) => {
-        const rect = container.getBoundingClientRect();
-        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(quakeGroup.children);
-        const tooltip = document.getElementById('globeTooltip');
-        if (intersects.length > 0 && intersects[0].object.userData.eq) {
-          const eq = intersects[0].object.userData.eq;
-          tooltip.style.display = 'block';
-          tooltip.style.left = `${event.offsetX + 14}px`;
-          tooltip.style.top = `${event.offsetY + 14}px`;
-          tooltip.innerHTML = `${eq.place || 'Unknown'}<br/>M ${Number(eq.mag || 0).toFixed(1)} | D ${Number(eq.depth || 0).toFixed(1)} km<br/>${eq.alert_level}`;
-        } else {
-          tooltip.style.display = 'none';
-        }
-      });
-
-      function loop() {
-        requestAnimationFrame(loop);
-        if (rotating && globe) {
-          globe.rotation.y += 0.0025;
-          quakeGroup.rotation.y += 0.0025;
-        }
-        renderer.render(scene, camera);
-      }
-      loop();
-
-      window.addEventListener('resize', () => {
-        const w = container.clientWidth;
-        const h = container.clientHeight;
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-        renderer.setSize(w, h);
-      });
-    }
-
-    function renderGlobePoints(data) {
-      while (quakeGroup.children.length) {
-        const point = quakeGroup.children.pop();
-        point.geometry.dispose();
-        point.material.dispose();
-      }
-      data.forEach((eq) => {
-        if (eq.latitude == null || eq.longitude == null || eq.mag == null) return;
-        const level = eq.alert_level || alertLevel(eq.mag);
-        const color = COLORS[level] || COLORS.LOW;
-        const size = Math.max(0.03, Math.min(0.14, eq.mag / 55));
-        const geometry = new THREE.SphereGeometry(size, 8, 8);
-        const material = new THREE.MeshBasicMaterial({ color });
-        const dot = new THREE.Mesh(geometry, material);
-        const pos = latLonToXYZ(eq.latitude, eq.longitude, 2.45);
-        dot.position.set(pos.x, pos.y, pos.z);
-        dot.userData.eq = eq;
-        quakeGroup.add(dot);
-      });
-    }
-
-    function initMap() {
-      map = L.map('earthquakeMap', { zoomControl: true }).setView([25, 25], 2);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap &copy; CARTO'
-      }).addTo(map);
-      mapLayer = L.layerGroup().addTo(map);
-
-      const legend = L.control({ position: 'bottomright' });
-      legend.onAdd = function () {
-        const div = L.DomUtil.create('div');
-        div.style.background = 'rgba(10,14,26,0.88)';
-        div.style.padding = '8px 10px';
-        div.style.border = '1px solid rgba(0,212,255,0.35)';
-        div.style.borderRadius = '8px';
-        div.innerHTML = `
-          <div><span style="color:${COLORS.CRITICAL}">●</span> CRITICAL</div>
-          <div><span style="color:${COLORS.HIGH}">●</span> HIGH</div>
-          <div><span style="color:${COLORS.MEDIUM}">●</span> MEDIUM</div>
-          <div><span style="color:${COLORS.LOW}">●</span> LOW</div>
-        `;
-        return div;
-      };
-      legend.addTo(map);
-    }
-
-    function renderMapMarkers(data) {
-      mapLayer.clearLayers();
-      data.forEach((eq) => {
-        if (eq.latitude == null || eq.longitude == null || eq.mag == null) return;
-        const level = eq.alert_level || alertLevel(eq.mag);
-        const marker = L.circleMarker([eq.latitude, eq.longitude], {
-          radius: Math.max(3, eq.mag * 3),
-          color: COLORS[level],
-          fillColor: COLORS[level],
-          fillOpacity: 0.8,
-          weight: 1
-        });
-        marker.bindPopup(`
-          <div>
-            <div><strong>Time:</strong> ${eq.time || '-'}</div>
-            <div><strong>Place:</strong> ${eq.place || '-'}</div>
-            <div><strong>Magnitude:</strong> ${Number(eq.mag).toFixed(1)}</div>
-            <div><strong>Depth:</strong> ${Number(eq.depth || 0).toFixed(1)} km</div>
-            <div><strong>Alert:</strong> <span style="color:${COLORS[level]}">${level}</span></div>
-            <div><strong>Region:</strong> ${eq.region || '-'}</div>
-          </div>
-        `);
-        marker.addTo(mapLayer);
-      });
-    }
-
-    function freqLast30Days(data) {
-      const mapCount = new Map();
-      const now = new Date();
-      for (let i = 29; i >= 0; i--) {
-        const d = new Date(now);
-        d.setDate(now.getDate() - i);
-        const key = d.toISOString().slice(0, 10);
-        mapCount.set(key, 0);
-      }
-      data.forEach((eq) => {
-        if (!eq.time) return;
-        const key = String(eq.time).slice(0, 10);
-        if (mapCount.has(key)) mapCount.set(key, mapCount.get(key) + 1);
-      });
-      return {
-        labels: [...mapCount.keys()],
-        values: [...mapCount.values()]
-      };
-    }
-
-    const doughnutLabelPlugin = {
-      id: 'doughnutLabelPlugin',
-      afterDatasetsDraw(chart) {
-        const { ctx } = chart;
-        const dataset = chart.data.datasets[0];
-        const meta = chart.getDatasetMeta(0);
-        const total = dataset.data.reduce((a, b) => a + b, 0) || 1;
-        meta.data.forEach((arc, i) => {
-          const value = dataset.data[i];
-          if (!value) return;
-          const p = Math.round((value / total) * 100);
-          const point = arc.tooltipPosition();
-          ctx.save();
-          ctx.fillStyle = '#fff';
-          ctx.font = '12px Rajdhani';
-          ctx.textAlign = 'center';
-          ctx.fillText(`${p}%`, point.x, point.y);
-          ctx.restore();
-        });
-      }
-    };
-
-    function renderCharts(data) {
-      const ranges = { Minor: 0, Light: 0, Moderate: 0, Strong: 0, Major: 0 };
-      const levels = { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 };
-      data.forEach((eq) => {
-        const mag = Number(eq.mag || 0);
-        if (mag < 2) ranges.Minor += 1;
-        else if (mag < 4) ranges.Light += 1;
-        else if (mag < 6) ranges.Moderate += 1;
-        else if (mag <= 8) ranges.Strong += 1;
-        else ranges.Major += 1;
-        levels[eq.alert_level || alertLevel(mag)] += 1;
-      });
-
-      const magCtx = document.getElementById('chartMagnitude').getContext('2d');
-      if (chartMagnitude) chartMagnitude.destroy();
-      const gradient = magCtx.createLinearGradient(0, 0, 0, 220);
-      gradient.addColorStop(0, 'rgba(0, 212, 255, 0.95)');
-      gradient.addColorStop(1, 'rgba(0, 212, 255, 0.2)');
-      chartMagnitude = new Chart(magCtx, {
-        type: 'bar',
-        data: { labels: Object.keys(ranges), datasets: [{ data: Object.values(ranges), backgroundColor: gradient, borderColor: '#00d4ff', borderWidth: 1.5 }] },
-        options: {
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' } },
-            y: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' }, beginAtZero: true }
-          }
-        }
-      });
-
-      if (chartAlerts) chartAlerts.destroy();
-      chartAlerts = new Chart(document.getElementById('chartAlerts'), {
-        type: 'doughnut',
-        data: {
-          labels: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'],
-          datasets: [{ data: [levels.LOW, levels.MEDIUM, levels.HIGH, levels.CRITICAL], backgroundColor: [COLORS.LOW, COLORS.MEDIUM, COLORS.HIGH, COLORS.CRITICAL] }]
-        },
-        options: {
-          plugins: {
-            legend: { labels: { color: '#fff' } }
-          }
-        },
-        plugins: [doughnutLabelPlugin]
-      });
-
-      if (chartFrequency) chartFrequency.destroy();
-      const series = freqLast30Days(data);
-      chartFrequency = new Chart(document.getElementById('chartFrequency'), {
-        type: 'line',
-        data: {
-          labels: series.labels,
-          datasets: [{
-            label: 'Earthquakes per day',
-            data: series.values,
-            borderColor: '#00d4ff',
-            backgroundColor: 'rgba(0,212,255,0.2)',
-            fill: true,
-            tension: 0.28
-          }]
-        },
-        options: {
-          plugins: { legend: { labels: { color: '#fff' } } },
-          scales: {
-            x: { ticks: { color: '#fff', maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,0.08)' } },
-            y: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.08)' }, beginAtZero: true }
-          }
-        }
-      });
-    }
-
-    function compareValues(a, b, key, dir) {
-      const va = (a[key] ?? '').toString().toLowerCase();
-      const vb = (b[key] ?? '').toString().toLowerCase();
-      if (key === 'mag' || key === 'depth') {
-        const na = Number(a[key] ?? 0);
-        const nb = Number(b[key] ?? 0);
-        return dir === 'asc' ? na - nb : nb - na;
-      }
-      if (key === 'time') {
-        return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
-      }
-      return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
-    }
-
-    function renderTable(data) {
-      const search = document.getElementById('searchInput').value.trim().toLowerCase();
-      let rows = data;
-      if (search) {
-        rows = rows.filter((r) => String(r.place || '').toLowerCase().includes(search));
-      }
-      rows = [...rows].sort((a, b) => compareValues(a, b, state.sort.key, state.sort.dir));
-
-      const tbody = document.getElementById('alertsTbody');
-      tbody.innerHTML = '';
-      rows.forEach((eq) => {
-        const tr = document.createElement('tr');
-        tr.className = `row-${(eq.alert_level || 'LOW').toLowerCase()}`;
-        const badgeClass = `badge-${(eq.alert_level || 'LOW').toLowerCase()}`;
-        tr.innerHTML = `
-          <td>${eq.time || '-'}</td>
-          <td>${eq.place || '-'}</td>
-          <td>${eq.mag != null ? Number(eq.mag).toFixed(1) : '-'}</td>
-          <td>${eq.depth != null ? Number(eq.depth).toFixed(1) : '-'}</td>
-          <td>${eq.region || '-'}</td>
-          <td><span class="badge-level ${badgeClass}">${eq.alert_level || 'LOW'}</span></td>
-        `;
-        tbody.appendChild(tr);
-      });
-      document.getElementById('visibleCount').textContent = rows.length;
-    }
-
-    function applyFilters() {
-      const region = document.getElementById('regionSelect').value;
-      const minMag = Number(document.getElementById('minMag').value);
-      let filtered = state.all.filter((eq) => Number(eq.mag || 0) >= minMag);
-      if (region !== 'All Regions') {
-        const q = region.toLowerCase();
-        filtered = filtered.filter((eq) =>
-          String(eq.region || '').toLowerCase().includes(q) || String(eq.place || '').toLowerCase().includes(q)
-        );
-      }
-      state.filtered = filtered;
-
-      const criticalCount = filtered.filter((eq) => eq.alert_level === 'CRITICAL').length;
-      document.getElementById('criticalBadge').textContent = criticalCount;
-      const bell = document.getElementById('criticalBell');
-      if (criticalCount > 0) {
-        bell.classList.remove('bell-shake');
-        void bell.offsetWidth;
-        bell.classList.add('bell-shake');
-      }
-
-      const mapData = state.mapOnlyPakistan ? filtered.filter((eq) => String(eq.region || '') === 'Pakistan') : filtered;
-      renderMapMarkers(mapData);
-      renderGlobePoints(filtered);
-      renderCharts(filtered);
-      renderTable(filtered.slice(0, 100));
-    }
-
-    async function loadData() {
-      const loading = document.getElementById('loadingOverlay');
-      loading.classList.remove('hide');
-      try {
-        const [summary, quakes] = await Promise.all([
-          getJSON('/api/summary'),
-          getJSON('/api/earthquakes')
-        ]);
-
-        state.all = (quakes.earthquakes || []).map((eq) => ({ ...eq, alert_level: eq.alert_level || alertLevel(eq.mag) }));
-        animateCount('cardTotal', summary.total_earthquakes || 0);
-        animateCount('cardPakistan', summary.pakistan_count || 0);
-        animateCount('cardCritical', summary.critical_count || 0);
-        animateCount('cardHigh', summary.high_count || 0);
-
-        applyFilters();
-        document.getElementById('speedupImage').src = `/api/speedup?t=${Date.now()}`;
-        document.getElementById('lastRefresh').textContent = nowText();
-      } catch (error) {
-        console.error(error);
-        alert('Failed to load EarthquakeWatch data. Check Flask logs.');
-      } finally {
-        loading.classList.add('hide');
-      }
-    }
-
-    function setupInteractions() {
-      document.getElementById('minMag').addEventListener('input', (e) => {
-        document.getElementById('minMagValue').textContent = Number(e.target.value).toFixed(1);
-      });
-      document.getElementById('alertRadius').addEventListener('input', (e) => {
-        document.getElementById('radiusValue').textContent = e.target.value;
-      });
-      document.getElementById('setAlertBtn').addEventListener('click', applyFilters);
-      document.getElementById('searchInput').addEventListener('keyup', () => renderTable(state.filtered.slice(0, 100)));
-
-      document.querySelectorAll('.sort-link').forEach((th) => {
-        th.addEventListener('click', () => {
-          const key = th.dataset.key;
-          if (state.sort.key === key) {
-            state.sort.dir = state.sort.dir === 'asc' ? 'desc' : 'asc';
-          } else {
-            state.sort.key = key;
-            state.sort.dir = 'desc';
-          }
-          renderTable(state.filtered.slice(0, 100));
-        });
-      });
-
-      document.getElementById('mapToggleBtn').addEventListener('click', () => {
-        state.mapOnlyPakistan = !state.mapOnlyPakistan;
-        document.getElementById('mapToggleBtn').textContent = state.mapOnlyPakistan ? 'Show All' : 'Pakistan Only';
-        applyFilters();
-      });
-
-      const scrollBtn = document.getElementById('scrollTopBtn');
-      window.addEventListener('scroll', () => {
-        scrollBtn.style.display = window.scrollY > 300 ? 'block' : 'none';
-      });
-      scrollBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-    }
-
-    window.addEventListener('DOMContentLoaded', async () => {
-      setClock();
-      setInterval(setClock, 1000);
-      setupInteractions();
-      initMap();
-      initGlobe();
-      await loadData();
-      setInterval(loadData, 30000);
-      setInterval(() => {
-        document.getElementById('lastRefresh').textContent = nowText();
-      }, 30000);
-    });
-  </script>
-+</body>
-+</html>
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0" />
+		<title>EarthquakeWatch | Powered by Hadoop and Apache Spark</title>
+
+		<link
+			rel="preconnect"
+			href="https://fonts.googleapis.com" />
+		<link
+			rel="preconnect"
+			href="https://fonts.gstatic.com"
+			crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;600;700&display=swap"
+			rel="stylesheet" />
+		<link
+			href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+			rel="stylesheet" />
+		<link
+			href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+			rel="stylesheet" />
+		<link
+			rel="stylesheet"
+			href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+			crossorigin="" />
+
+		<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+		<script
+			src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+			crossorigin=""></script>
+		<script src="https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.min.js"></script>
+
+		<style>
+			:root {
+				--bg: #f4f8ff;
+				--panel: #ffffff;
+				--blue: #0ea5e9;
+				--red: #ef4444;
+				--orange: #f97316;
+				--yellow: #facc15;
+				--green: #22c55e;
+				--text: #0f172a;
+				--muted: #475569;
+			}
+			body {
+				margin: 0;
+				background: var(--bg);
+				color: var(--text);
+				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Rajdhani', sans-serif;
+				font-weight: 400;
+				line-height: 1.6;
+				-webkit-font-smoothing: antialiased;
+				-moz-osx-font-smoothing: grayscale;
+			}
+			.brand-font {
+				font-family: 'Orbitron', sans-serif;
+				font-weight: 700;
+				letter-spacing: 0.5px;
+			}
+			.topbar {
+				position: sticky;
+				top: 0;
+				z-index: 1000;
+				background: #ffffff;
+				border-bottom: 1px solid rgba(14, 165, 233, 0.25);
+			}
+			.hero {
+				padding: 1.2rem 0 0.5rem;
+				text-align: center;
+			}
+			.hero h1 {
+				margin: 0;
+				color: var(--blue);
+				text-shadow: 0 0 8px rgba(14, 165, 233, 0.25);
+				font-size: clamp(1.8rem, 6vw, 3.2rem);
+				font-weight: 700;
+				letter-spacing: -1px;
+			}
+			.panel {
+				background: linear-gradient(180deg, #ffffff, #f8fbff);
+				border: 1px solid rgba(14, 165, 233, 0.2);
+				border-radius: 12px;
+				box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+				padding: 0.9rem;
+				margin-bottom: 0.9rem;
+			}
+			.summary-card {
+				border-radius: 10px;
+				border: 1px solid rgba(14, 165, 233, 0.22);
+				background: #ffffff;
+				text-align: center;
+				padding: 0.9rem;
+				min-height: 130px;
+				box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+			}
+			.summary-card small {
+				font-weight: 500;
+				color: var(--muted);
+			}
+			.summary-value {
+				font-size: 1.9rem;
+				font-weight: 700;
+				letter-spacing: -0.5px;
+			}
+
+			#globeContainer {
+				width: 100%;
+				height: 420px;
+				border: 1px solid rgba(0, 212, 255, 0.3);
+				border-radius: 10px;
+				background: radial-gradient(circle at 50% 25%, #dbeafe, #eff6ff);
+				overflow: hidden;
+				position: relative;
+			}
+			#globeFallback {
+				position: absolute;
+				inset: 0;
+				display: none;
+				align-items: center;
+				justify-content: center;
+				color: #0369a1;
+				background: rgba(239, 246, 255, 0.9);
+			}
+
+			#earthquakeMap {
+				width: 100%;
+				height: 430px;
+				border-radius: 10px;
+				border: 1px solid rgba(34, 211, 238, 0.35);
+				background: #eaf4ff;
+			}
+
+			.table-wrap {
+				max-height: 360px;
+				overflow: auto;
+			}
+			.badge-critical {
+				background: rgba(255, 68, 68, 0.2);
+				color: var(--red);
+				border: 1px solid var(--red);
+			}
+			.badge-high {
+				background: rgba(255, 136, 0, 0.2);
+				color: var(--orange);
+				border: 1px solid var(--orange);
+			}
+			.badge-medium {
+				background: rgba(255, 213, 74, 0.2);
+				color: var(--yellow);
+				border: 1px solid var(--yellow);
+			}
+			.badge-low {
+				background: rgba(0, 255, 136, 0.2);
+				color: var(--green);
+				border: 1px solid var(--green);
+			}
+			.control-light {
+				background: #ffffff !important;
+				color: var(--text) !important;
+				border: 1px solid rgba(14, 165, 233, 0.45) !important;
+			}
+			.control-light:focus {
+				box-shadow: 0 0 0 0.2rem rgba(14, 165, 233, 0.2) !important;
+			}
+			.table-light-custom {
+				--bs-table-bg: transparent;
+				--bs-table-color: var(--text);
+				--bs-table-border-color: #dbeafe;
+			}
+			.text-subtle {
+				color: var(--muted);
+			}
+
+			.loading {
+				position: fixed;
+				inset: 0;
+				z-index: 2000;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				background: rgba(248, 250, 252, 0.96);
+			}
+			.loading.hide {
+				display: none;
+			}
+			.spinner-ring {
+				width: 74px;
+				height: 74px;
+				border: 5px solid rgba(148, 163, 184, 0.25);
+				border-top-color: var(--blue);
+				border-radius: 50%;
+				animation: spin 0.9s linear infinite;
+				margin-bottom: 1rem;
+			}
+			@keyframes spin {
+				to {
+					transform: rotate(360deg);
+				}
+			}
+
+			.dot-live {
+				width: 10px;
+				height: 10px;
+				border-radius: 50%;
+				background: var(--red);
+				display: inline-block;
+				box-shadow: 0 0 0 rgba(255, 68, 68, 0.6);
+				animation: pulse 1.2s infinite;
+				margin-left: 8px;
+			}
+			@keyframes pulse {
+				0% {
+					box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.6);
+				}
+				100% {
+					box-shadow: 0 0 0 14px rgba(255, 68, 68, 0);
+				}
+			}
+			.clock-box {
+				min-width: 220px;
+				text-align: right;
+				line-height: 1.1;
+			}
+			.clock-time {
+				font-size: 0.95rem;
+				font-weight: 700;
+				color: #0369a1;
+			}
+			.clock-date {
+				font-size: 0.75rem;
+				color: #64748b;
+				opacity: 0.9;
+			}
+		</style>
+	</head>
+	<body>
+		<div
+			id="loadingOverlay"
+			class="loading">
+			<div class="spinner-ring"></div>
+			<h2 class="brand-font text-info mb-0">EarthquakeWatch</h2>
+			<p class="mb-0">Loading real-time disaster dashboard...</p>
+		</div>
+
+		<nav
+			class="topbar py-2 px-3 d-flex justify-content-between align-items-center">
+			<div class="d-flex align-items-center">
+				<strong class="brand-font">🌍 EarthquakeWatch</strong>
+				<span class="dot-live"></span>
+			</div>
+			<div class="d-flex align-items-center gap-2">
+				<button
+					id="runRefreshBtn"
+					class="btn btn-info btn-sm fw-semibold"
+					title="Run scripts and refresh dashboard">
+					<i class="bi bi-arrow-repeat me-1"></i>Run & Update
+				</button>
+				<div class="clock-box">
+					<div
+						id="clockNow"
+						class="clock-time">
+						--:--:--
+					</div>
+					<div
+						id="clockDate"
+						class="clock-date">
+						Loading date...
+					</div>
+				</div>
+				<a
+					class="btn btn-outline-info btn-sm"
+					href="https://github.com/zafar1162014/earthquake-alert-pipeline"
+					target="_blank"
+					rel="noopener noreferrer"
+					><i class="bi bi-github"></i
+				></a>
+			</div>
+		</nav>
+		<div
+			id="runStatus"
+			class="small text-center py-1"
+			style="background: #eff6ff; color: #0369a1; min-height: 22px; border-bottom: 1px solid #dbeafe"></div>
+
+		<main class="container-fluid py-2">
+			<section class="hero">
+				<h1 class="brand-font">EarthquakeWatch</h1>
+				<div class="text-subtle">
+					Real-Time Disaster Alert Pipeline — Pakistan and Global Monitor
+				</div>
+			</section>
+
+			<section class="row g-2 mb-2">
+				<div class="col-12 col-md-6 col-xl-3">
+					<div class="summary-card">
+						<div><i class="bi bi-globe2 text-info"></i></div>
+						<div
+							id="cardTotal"
+							class="summary-value">
+							0
+						</div>
+						<small>Total Earthquakes</small>
+					</div>
+				</div>
+				<div class="col-12 col-md-6 col-xl-3">
+					<div class="summary-card">
+						<div>
+							<i
+								class="bi bi-geo-alt-fill"
+								style="color: var(--green)"></i>
+						</div>
+						<div
+							id="cardPakistan"
+							class="summary-value">
+							0
+						</div>
+						<small>Pakistan Earthquakes</small>
+					</div>
+				</div>
+				<div class="col-12 col-md-6 col-xl-3">
+					<div class="summary-card">
+						<div>
+							<i
+								class="bi bi-exclamation-triangle-fill"
+								style="color: var(--red)"></i>
+						</div>
+						<div
+							id="cardCritical"
+							class="summary-value">
+							0
+						</div>
+						<small>Critical Alerts</small>
+					</div>
+				</div>
+				<div class="col-12 col-md-6 col-xl-3">
+					<div class="summary-card">
+						<div>
+							<i
+								class="bi bi-exclamation-circle-fill"
+								style="color: var(--orange)"></i>
+						</div>
+						<div
+							id="cardHigh"
+							class="summary-value">
+							0
+						</div>
+						<small>High Alerts</small>
+					</div>
+				</div>
+			</section>
+
+			<section class="panel">
+			<h5 class="mb-2 text-info" style="font-size: 1.3rem; font-weight: 600; letter-spacing: 0.3px;">🌍 About EarthquakeWatch</h5>
+			<p class="mb-3" style="font-size: 0.95rem; line-height: 1.7; color: var(--muted);">
+				EarthquakeWatch is your trusted partner for real-time earthquake monitoring and instant disaster alerts. We provide critical seismic intelligence to communities, governments, and organizations across Pakistan and globally, enabling timely emergency response and life-saving decisions.
+			</p>
+			<div class="row g-2">
+				<div class="col-12 col-md-4">
+					<div class="p-3 border border-info rounded" style="background: rgba(14, 165, 233, 0.04); font-size: 0.9rem;">
+						<strong class="text-info d-block mb-2">📡 Live Data Feed</strong>
+						Access real-time earthquake data from USGS with instant regional alerts and severity classification.
+					</div>
+				</div>
+				<div class="col-12 col-md-4">
+					<div class="p-3 border border-info rounded" style="background: rgba(14, 165, 233, 0.04); font-size: 0.9rem;">
+						<strong class="text-info d-block mb-2">⚡ Smart Alerts</strong>
+						Instant notifications for critical earthquakes with impact assessment and risk evaluation.
+					</div>
+				</div>
+				<div class="col-12 col-md-4">
+					<div class="p-3 border border-info rounded" style="background: rgba(14, 165, 233, 0.04); font-size: 0.9rem;">
+						<strong class="text-info d-block mb-2">🎯 Detailed Analytics</strong>
+						Comprehensive insights on earthquake patterns, hotspots, and disaster risk assessment.
+					</div>
+				</div>
+			</section>
+
+			<section class="panel">
+				<div class="row g-2 align-items-end">
+					<div class="col-12 col-lg-2">
+						<label class="form-label mb-1">Data View</label>
+						<select
+							id="viewMode"
+							class="form-select control-light">
+							<option value="all">All Data</option>
+							<option value="recent">Recent 100</option>
+							<option value="pakistan">Pakistan Only</option>
+						</select>
+					</div>
+					<div class="col-12 col-lg-3">
+						<label class="form-label mb-1">Select Region</label>
+						<select
+							id="regionSelect"
+							class="form-select control-light">
+							<option>All Regions</option>
+							<option>Pakistan</option>
+							<option>Afghanistan</option>
+							<option>India</option>
+							<option>Iran</option>
+							<option>Turkey</option>
+							<option>Indonesia</option>
+							<option>Japan</option>
+							<option>Chile</option>
+							<option>USA</option>
+							<option>Philippines</option>
+						</select>
+					</div>
+					<div class="col-12 col-lg-2">
+						<label class="form-label mb-1">Time Range</label>
+						<select
+							id="timeRange"
+							class="form-select control-light">
+							<option value="all">All Time</option>
+							<option value="24h">Last 24 Hours</option>
+							<option value="7d">Last 7 Days</option>
+							<option
+								value="30d"
+								selected>
+								Last 30 Days
+							</option>
+						</select>
+					</div>
+					<div class="col-12 col-lg-2">
+						<label class="form-label mb-1">Alert Level</label>
+						<select
+							id="alertFilter"
+							class="form-select control-light">
+							<option value="all">All Alerts</option>
+							<option value="critical">Critical Only</option>
+							<option value="high">High Only</option>
+							<option value="high_critical">High + Critical</option>
+							<option value="medium">Medium Only</option>
+							<option value="low">Low Only</option>
+						</select>
+					</div>
+					<div class="col-12 col-lg-2">
+						<label class="form-label mb-1"
+							>Minimum Magnitude: <span id="minMagValue">4.0</span></label
+						>
+						<input
+							id="minMag"
+							type="range"
+							min="1"
+							max="9"
+							step="0.1"
+							value="4"
+							class="form-range" />
+					</div>
+					<div class="col-12 col-lg-1 d-grid">
+						<button
+							id="setAlertBtn"
+							class="btn btn-info fw-semibold">
+							Set Alert
+						</button>
+					</div>
+				</div>
+			</section>
+
+			<section class="panel">
+				<div class="d-flex justify-content-between align-items-center mb-2">
+					<h5 class="mb-0 text-info">EarthquakeWatch Live Map</h5>
+					<small class="text-subtle"
+						>Interactive earthquake markers</small
+					>
+				</div>
+				<div id="earthquakeMap"></div>
+			</section>
+
+			<section class="row g-2">
+				<div class="col-12 col-lg-4">
+					<div class="panel">
+						<h6 class="text-info">Magnitude Distribution</h6>
+						<canvas
+							id="chartMagnitude"
+							height="220"></canvas>
+					</div>
+				</div>
+				<div class="col-12 col-lg-4">
+					<div class="panel">
+						<h6 class="text-info">Alert Level Breakdown</h6>
+						<canvas
+							id="chartAlerts"
+							height="220"></canvas>
+					</div>
+				</div>
+				<div class="col-12 col-lg-4">
+					<div class="panel">
+						<h6 class="text-info">Earthquake Frequency (30 days)</h6>
+						<canvas
+							id="chartFrequency"
+							height="220"></canvas>
+					</div>
+				</div>
+			</section>
+
+			<section class="panel">
+				<div class="d-flex justify-content-between align-items-center mb-2">
+					<h5 class="mb-0 text-info">Recent Earthquake Alerts</h5>
+					<input
+						id="searchInput"
+						class="form-control form-control-sm w-auto control-light"
+						placeholder="Search by location..." />
+				</div>
+				<div class="table-wrap">
+					<table class="table table-sm align-middle mb-0 table-light-custom">
+						<thead>
+							<tr>
+								<th>Time</th>
+								<th>Location</th>
+								<th>Mag</th>
+								<th>Depth</th>
+								<th>Region</th>
+								<th>Alert</th>
+							</tr>
+						</thead>
+						<tbody id="alertsTbody"></tbody>
+					</table>
+				</div>
+			</section>
+
+			<section class="panel">
+				<h5 class="mb-3 text-info" style="font-size: 1.2rem; font-weight: 600;">🔔 Get Real-Time Alerts</h5>
+				<div class="row g-3">
+					<div class="col-12 col-md-6">
+						<div style="background: #eff6ff; padding: 1.2rem; border-radius: 8px; border-left: 4px solid #0ea5e9;">
+							<h6 class="text-info mb-2" style="font-weight: 600;">Enable Browser Notifications</h6>
+							<p style="font-size: 0.9rem; margin-bottom: 0.8rem; color: var(--muted);">
+								Stay informed with instant push notifications when critical earthquakes occur. Get alerts directly to your device without missing important seismic events.
+							</p>
+							<button class="btn btn-info btn-sm" onclick="enableNotifications()" style="font-weight: 500;">
+								<i class="bi bi-bell me-1"></i>Enable Now
+							</button>
+						</div>
+					</div>
+					<div class="col-12 col-md-6">
+						<div style="background: #f0fdf4; padding: 1.2rem; border-radius: 8px; border-left: 4px solid #22c55e;">
+							<h6 style="color: #22c55e; margin-bottom: 0.8rem; font-weight: 600;">✓ Smart Filtering</h6>
+							<p style="font-size: 0.9rem; margin-bottom: 0.8rem; color: var(--muted);">
+								Use filters above to customize your alert preferences. Monitor specific regions, set magnitude thresholds, and track high-risk areas relevant to you.
+							</p>
+							<small style="color: #16a34a;">Receive only the alerts you care about</small>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section class="panel text-center">
+				<h5 class="text-info" style="font-size: 1.2rem; font-weight: 600;">
+					Parallel Processing Benchmark — Amdahl Law Validation
+				</h5>
+				<img
+					id="speedupImage"
+					src="/api/speedup"
+					class="img-fluid rounded border border-info"
+					style="max-width: 820px"
+					alt="Speedup chart" />
+				<div class="small text-subtle mt-2">
+					This chart compares actual Spark speedup with theoretical Amdahl
+					prediction (P = 0.85).
+				</div>
+			</section>
+
+			<section class="panel text-center">
+				<h6 class="text-info mb-2">Want to improve this dashboard?</h6>
+				<p class="mb-2">
+					You can improve by contributing on the GitHub repository.
+				</p>
+				<a
+					href="https://github.com/zafar1162014/earthquake-alert-pipeline"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="btn btn-outline-info btn-sm">
+					<i class="bi bi-github me-1"></i>Contribute on GitHub
+				</a>
+			</section>
+		</main>
+
+		<script>
+			const COLORS = {
+				CRITICAL: '#ff4444',
+				HIGH: '#ff8800',
+				MEDIUM: '#ffd54a',
+				LOW: '#00ff88',
+			};
+			const state = { all: [], filtered: [] };
+
+			let map, mapLayer;
+			let chartMagnitude, chartAlerts, chartFrequency;
+			let scene, camera, renderer, globe, dotGroup;
+			let dragging = false,
+				lastX = 0,
+				lastY = 0;
+
+			function setClock() {
+				const now = new Date();
+				const timeElement = document.getElementById('clockNow');
+				const dateElement = document.getElementById('clockDate');
+				if (timeElement) {
+					timeElement.textContent = now.toLocaleTimeString([], {
+						hour: '2-digit',
+						minute: '2-digit',
+						second: '2-digit',
+						hour12: true,
+					});
+				}
+				if (dateElement) {
+					dateElement.textContent = now.toLocaleDateString([], {
+						weekday: 'short',
+						year: 'numeric',
+						month: 'short',
+						day: 'numeric',
+					});
+				}
+			}
+			function alertLevel(m) {
+				if (m > 6) return 'CRITICAL';
+				if (m > 5) return 'HIGH';
+				if (m > 4) return 'MEDIUM';
+				return 'LOW';
+			}
+
+			function enableNotifications() {
+				if (!('Notification' in window)) {
+					alert('This browser does not support notifications.');
+					return;
+				}
+				if (Notification.permission === 'granted') {
+					alert('Notifications are already enabled!');
+					return;
+				}
+				if (Notification.permission !== 'denied') {
+					Notification.requestPermission().then((permission) => {
+						if (permission === 'granted') {
+							new Notification('🌍 EarthquakeWatch', {
+								body: 'Real-time earthquake alerts enabled! You will receive notifications for critical events.',
+								icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%230ea5e9"/><text x="50" y="60" font-size="50" text-anchor="middle" fill="white">🌍</text></svg>',
+							});
+						}
+					});
+				}
+			}
+
+			async function getJSON(url) {
+				const r = await fetch(url);
+				if (!r.ok) throw new Error(url);
+				return r.json();
+			}
+
+			function animateNumber(id, value) {
+				const el = document.getElementById(id);
+				const start = Number(el.dataset.v || 0);
+				const begin = performance.now();
+				function step(t) {
+					const p = Math.min((t - begin) / 700, 1);
+					const v = Math.round(start + (value - start) * p);
+					el.textContent = v.toLocaleString();
+					if (p < 1) requestAnimationFrame(step);
+				}
+				el.dataset.v = value;
+				requestAnimationFrame(step);
+			}
+
+			function parseTimeMillis(timeValue) {
+				if (!timeValue) return 0;
+				const t = Date.parse(timeValue);
+				return Number.isNaN(t) ? 0 : t;
+			}
+
+			function isInSelectedTimeRange(timeValue, range) {
+				if (range === 'all') return true;
+				const eventTime = parseTimeMillis(timeValue);
+				if (!eventTime) return false;
+				const now = Date.now();
+				if (range === '24h') return eventTime >= now - 24 * 60 * 60 * 1000;
+				if (range === '7d') return eventTime >= now - 7 * 24 * 60 * 60 * 1000;
+				if (range === '30d') return eventTime >= now - 30 * 24 * 60 * 60 * 1000;
+				return true;
+			}
+
+			function isMatchingAlertFilter(level, filterValue) {
+				if (filterValue === 'all') return true;
+				if (filterValue === 'critical') return level === 'CRITICAL';
+				if (filterValue === 'high') return level === 'HIGH';
+				if (filterValue === 'high_critical')
+					return level === 'HIGH' || level === 'CRITICAL';
+				if (filterValue === 'medium') return level === 'MEDIUM';
+				if (filterValue === 'low') return level === 'LOW';
+				return true;
+			}
+
+			function updateSummaryCardsFromData(data) {
+				const total = data.length;
+				const pakistan = data.filter(
+					(eq) => String(eq.region || '') === 'Pakistan',
+				).length;
+				const critical = data.filter(
+					(eq) => eq.alert_level === 'CRITICAL',
+				).length;
+				const high = data.filter((eq) => eq.alert_level === 'HIGH').length;
+				animateNumber('cardTotal', total);
+				animateNumber('cardPakistan', pakistan);
+				animateNumber('cardCritical', critical);
+				animateNumber('cardHigh', high);
+			}
+
+			function sortByTimeDesc(items) {
+				return [...items].sort(
+					(a, b) => parseTimeMillis(b.time) - parseTimeMillis(a.time),
+				);
+			}
+
+			function initMap() {
+				if (typeof L === 'undefined') return;
+				map = L.map('earthquakeMap').setView([24, 30], 2);
+				L.tileLayer(
+					'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+					{ attribution: '&copy; OpenStreetMap contributors' },
+				).addTo(map);
+				mapLayer = L.layerGroup().addTo(map);
+				setTimeout(() => map.invalidateSize(), 200);
+			}
+
+			function drawMap(data) {
+				if (!map || !mapLayer) return;
+				mapLayer.clearLayers();
+				const bounds = [];
+				data.forEach((eq) => {
+					if (eq.latitude == null || eq.longitude == null || eq.mag == null)
+						return;
+					bounds.push([eq.latitude, eq.longitude]);
+					const lvl = eq.alert_level || alertLevel(Number(eq.mag));
+					const color = COLORS[lvl] || COLORS.LOW;
+					const marker = L.circleMarker([eq.latitude, eq.longitude], {
+						radius: Math.max(3, Number(eq.mag) * 2.5),
+						color,
+						fillColor: color,
+						fillOpacity: 0.8,
+						weight: 1,
+					});
+					marker.bindPopup(
+						`<div><b>${eq.place || '-'}</b><br/>M ${Number(eq.mag).toFixed(1)} | ${lvl}<br/>Depth ${Number(eq.depth || 0).toFixed(1)} km<br/>${eq.region || '-'}</div>`,
+					);
+					marker.addTo(mapLayer);
+				});
+				if (bounds.length > 1) {
+					map.fitBounds(bounds, { padding: [30, 30], maxZoom: 5 });
+				} else if (bounds.length === 1) {
+					map.setView(bounds[0], 5);
+				}
+			}
+
+			function latLonToVec(lat, lon, r) {
+				const phi = ((90 - lat) * Math.PI) / 180;
+				const theta = ((lon + 180) * Math.PI) / 180;
+				return {
+					x: -r * Math.sin(phi) * Math.cos(theta),
+					y: r * Math.cos(phi),
+					z: r * Math.sin(phi) * Math.sin(theta),
+				};
+			}
+
+			function initGlobe() {
+				const container = document.getElementById('globeContainer');
+				if (typeof THREE === 'undefined' || !container) {
+					document.getElementById('globeFallback').style.display = 'flex';
+					return;
+				}
+				try {
+					scene = new THREE.Scene();
+					camera = new THREE.PerspectiveCamera(
+						45,
+						container.clientWidth / container.clientHeight,
+						0.1,
+						1000,
+					);
+					camera.position.z = 7;
+					renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+					renderer.setSize(container.clientWidth, container.clientHeight);
+					container.appendChild(renderer.domElement);
+
+					scene.add(new THREE.AmbientLight(0x88aacc, 0.9));
+					const dl = new THREE.DirectionalLight(0x00d4ff, 1.0);
+					dl.position.set(3, 2, 5);
+					scene.add(dl);
+
+					const starGeo = new THREE.BufferGeometry();
+					const starCount = 500;
+					const pts = [];
+					for (let i = 0; i < starCount; i++) {
+						pts.push(
+							(Math.random() - 0.5) * 80,
+							(Math.random() - 0.5) * 80,
+							(Math.random() - 0.5) * 80,
+						);
+					}
+					starGeo.setAttribute(
+						'position',
+						new THREE.Float32BufferAttribute(pts, 3),
+					);
+					scene.add(
+						new THREE.Points(
+							starGeo,
+							new THREE.PointsMaterial({ color: 0xffffff, size: 0.07 }),
+						),
+					);
+
+					globe = new THREE.Mesh(
+						new THREE.SphereGeometry(2.3, 50, 50),
+						new THREE.MeshStandardMaterial({
+							color: 0x0a2a4a,
+							roughness: 0.8,
+							metalness: 0.1,
+						}),
+					);
+					scene.add(globe);
+					const wire = new THREE.Mesh(
+						new THREE.SphereGeometry(2.305, 26, 26),
+						new THREE.MeshBasicMaterial({
+							color: 0x1b4b82,
+							wireframe: true,
+							transparent: true,
+							opacity: 0.25,
+						}),
+					);
+					scene.add(wire);
+
+					dotGroup = new THREE.Group();
+					scene.add(dotGroup);
+
+					container.addEventListener('mousedown', (e) => {
+						dragging = true;
+						lastX = e.clientX;
+						lastY = e.clientY;
+					});
+					window.addEventListener('mouseup', () => (dragging = false));
+					window.addEventListener('mousemove', (e) => {
+						if (!dragging || !globe) return;
+						const dx = e.clientX - lastX;
+						const dy = e.clientY - lastY;
+						globe.rotation.y += dx * 0.004;
+						globe.rotation.x += dy * 0.002;
+						dotGroup.rotation.y += dx * 0.004;
+						dotGroup.rotation.x += dy * 0.002;
+						lastX = e.clientX;
+						lastY = e.clientY;
+					});
+					container.addEventListener(
+						'wheel',
+						(e) => {
+							e.preventDefault();
+							camera.position.z = Math.max(
+								4,
+								Math.min(11, camera.position.z + e.deltaY * 0.01),
+							);
+						},
+						{ passive: false },
+					);
+
+					function animate() {
+						requestAnimationFrame(animate);
+						if (!dragging && globe) {
+							globe.rotation.y += 0.0022;
+							dotGroup.rotation.y += 0.0022;
+						}
+						renderer.render(scene, camera);
+					}
+					animate();
+
+					window.addEventListener('resize', () => {
+						if (!renderer || !camera) return;
+						const w = container.clientWidth,
+							h = container.clientHeight;
+						renderer.setSize(w, h);
+						camera.aspect = w / h;
+						camera.updateProjectionMatrix();
+					});
+				} catch (err) {
+					console.error('Globe init failed', err);
+					document.getElementById('globeFallback').style.display = 'flex';
+				}
+			}
+
+			function drawGlobe(data) {
+				if (!dotGroup) return;
+				while (dotGroup.children.length) {
+					const obj = dotGroup.children.pop();
+					obj.geometry.dispose();
+					obj.material.dispose();
+				}
+				data.forEach((eq) => {
+					if (eq.latitude == null || eq.longitude == null || eq.mag == null)
+						return;
+					const lvl = eq.alert_level || alertLevel(Number(eq.mag));
+					const color = COLORS[lvl] || COLORS.LOW;
+					const s = Math.max(0.03, Math.min(0.13, Number(eq.mag) / 55));
+					const dot = new THREE.Mesh(
+						new THREE.SphereGeometry(s, 8, 8),
+						new THREE.MeshBasicMaterial({ color }),
+					);
+					const p = latLonToVec(
+						Number(eq.latitude),
+						Number(eq.longitude),
+						2.35,
+					);
+					dot.position.set(p.x, p.y, p.z);
+					dotGroup.add(dot);
+				});
+			}
+
+			function drawCharts(data) {
+				const bins = { Minor: 0, Light: 0, Moderate: 0, Strong: 0, Major: 0 };
+				const levels = { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 };
+				const byDay = new Map();
+				const now = new Date();
+				for (let i = 29; i >= 0; i--) {
+					const d = new Date(now);
+					d.setDate(now.getDate() - i);
+					byDay.set(d.toISOString().slice(0, 10), 0);
+				}
+
+				data.forEach((eq) => {
+					const m = Number(eq.mag || 0);
+					if (m < 2) bins.Minor++;
+					else if (m < 4) bins.Light++;
+					else if (m < 6) bins.Moderate++;
+					else if (m <= 8) bins.Strong++;
+					else bins.Major++;
+					levels[eq.alert_level || alertLevel(m)]++;
+					if (eq.time) {
+						const k = String(eq.time).slice(0, 10);
+						if (byDay.has(k)) byDay.set(k, byDay.get(k) + 1);
+					}
+				});
+
+				if (chartMagnitude) chartMagnitude.destroy();
+				chartMagnitude = new Chart(document.getElementById('chartMagnitude'), {
+					type: 'bar',
+					data: {
+						labels: Object.keys(bins),
+						datasets: [
+							{
+								data: Object.values(bins),
+								backgroundColor: 'rgba(0,212,255,0.65)',
+								borderColor: '#00d4ff',
+								borderWidth: 1.2,
+							},
+						],
+					},
+					options: {
+						plugins: { legend: { display: false } },
+						scales: {
+							x: { ticks: { color: '#fff' } },
+							y: { ticks: { color: '#fff' }, beginAtZero: true },
+						},
+					},
+				});
+
+				if (chartAlerts) chartAlerts.destroy();
+				chartAlerts = new Chart(document.getElementById('chartAlerts'), {
+					type: 'doughnut',
+					data: {
+						labels: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'],
+						datasets: [
+							{
+								data: [levels.LOW, levels.MEDIUM, levels.HIGH, levels.CRITICAL],
+								backgroundColor: [
+									COLORS.LOW,
+									COLORS.MEDIUM,
+									COLORS.HIGH,
+									COLORS.CRITICAL,
+								],
+							},
+						],
+					},
+					options: { plugins: { legend: { labels: { color: '#fff' } } } },
+				});
+
+				if (chartFrequency) chartFrequency.destroy();
+				chartFrequency = new Chart(document.getElementById('chartFrequency'), {
+					type: 'line',
+					data: {
+						labels: [...byDay.keys()],
+						datasets: [
+							{
+								data: [...byDay.values()],
+								label: 'Daily quakes',
+								borderColor: '#00d4ff',
+								backgroundColor: 'rgba(0,212,255,0.2)',
+								fill: true,
+								tension: 0.25,
+							},
+						],
+					},
+					options: {
+						plugins: { legend: { labels: { color: '#fff' } } },
+						scales: {
+							x: { ticks: { color: '#fff', maxTicksLimit: 7 } },
+							y: { ticks: { color: '#fff' }, beginAtZero: true },
+						},
+					},
+				});
+			}
+
+			function levelBadge(level) {
+				if (level === 'CRITICAL')
+					return `<span class="badge badge-critical">CRITICAL</span>`;
+				if (level === 'HIGH')
+					return `<span class="badge badge-high">HIGH</span>`;
+				if (level === 'MEDIUM')
+					return `<span class="badge badge-medium">MEDIUM</span>`;
+				return `<span class="badge badge-low">LOW</span>`;
+			}
+
+			function drawTable(data) {
+				const q = document
+					.getElementById('searchInput')
+					.value.trim()
+					.toLowerCase();
+				const rows = sortByTimeDesc(data).filter(
+					(r) =>
+						!q ||
+						String(r.place || '')
+							.toLowerCase()
+							.includes(q),
+				);
+				const tbody = document.getElementById('alertsTbody');
+				tbody.innerHTML = '';
+				rows.slice(0, 100).forEach((eq) => {
+					const prettyTime = eq.time ? new Date(eq.time).toLocaleString() : '-';
+					const tr = document.createElement('tr');
+					tr.innerHTML = `<td>${prettyTime}</td><td>${eq.place || '-'}</td><td>${eq.mag != null ? Number(eq.mag).toFixed(1) : '-'}</td><td>${eq.depth != null ? Number(eq.depth).toFixed(1) : '-'}</td><td>${eq.region || '-'}</td><td>${levelBadge(eq.alert_level || 'LOW')}</td>`;
+					tbody.appendChild(tr);
+				});
+			}
+
+			function applyFilters() {
+				const selectedViewMode = document.getElementById('viewMode').value;
+				const region = document.getElementById('regionSelect').value;
+				const timeRange = document.getElementById('timeRange').value;
+				const alertFilter = document.getElementById('alertFilter').value;
+				const minMag = Number(document.getElementById('minMag').value);
+
+				let data = sortByTimeDesc(state.all);
+				if (selectedViewMode === 'recent') {
+					data = data.slice(0, 100);
+				}
+				if (selectedViewMode === 'pakistan') {
+					data = data.filter((eq) => String(eq.region || '') === 'Pakistan');
+				}
+
+				data = data.filter((eq) => Number(eq.mag || 0) >= minMag);
+				data = data.filter((eq) => isInSelectedTimeRange(eq.time, timeRange));
+				data = data.filter((eq) =>
+					isMatchingAlertFilter(
+						eq.alert_level || alertLevel(Number(eq.mag || 0)),
+						alertFilter,
+					),
+				);
+				if (region !== 'All Regions') {
+					const k = region.toLowerCase();
+					data = data.filter(
+						(eq) =>
+							String(eq.region || '')
+								.toLowerCase()
+								.includes(k) ||
+							String(eq.place || '')
+								.toLowerCase()
+								.includes(k),
+					);
+				}
+				state.filtered = data;
+				updateSummaryCardsFromData(data);
+
+				drawMap(data);
+				drawCharts(data);
+				drawTable(data);
+			}
+
+			async function loadDashboard() {
+				const overlay = document.getElementById('loadingOverlay');
+				overlay.classList.remove('hide');
+				try {
+					const eqRes = await getJSON('/api/earthquakes');
+
+					const earthquakes = eqRes.earthquakes || [];
+					state.all = earthquakes.map((eq) => ({
+						...eq,
+						alert_level: eq.alert_level || alertLevel(Number(eq.mag || 0)),
+					}));
+
+					applyFilters();
+					document.getElementById('speedupImage').src =
+						`/api/speedup?t=${Date.now()}`;
+				} catch (err) {
+					console.error('Dashboard load failed', err);
+				} finally {
+					overlay.classList.add('hide');
+				}
+			}
+
+			async function runAndRefreshDashboard() {
+				const button = document.getElementById('runRefreshBtn');
+				const status = document.getElementById('runStatus');
+				if (!button || !status) return;
+
+				button.disabled = true;
+				button.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Running...';
+				status.textContent = 'Running refresh script and updating data...';
+
+				try {
+					const response = await fetch('/api/refresh-run', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ includeBenchmark: false }),
+					});
+					const result = await response.json();
+
+					if (result.success) {
+						status.textContent = 'Refresh completed. Reloading dashboard...';
+						await loadDashboard();
+						status.textContent = 'Dashboard updated successfully.';
+					} else {
+						const firstFailed = (result.results || []).find(
+							(item) => !item.success,
+						);
+						status.textContent = `Refresh finished with errors${firstFailed ? ` (${firstFailed.script})` : ''}.`;
+					}
+				} catch (error) {
+					console.error('Run & Update failed', error);
+					status.textContent = 'Failed to run refresh script.';
+				} finally {
+					button.disabled = false;
+					button.innerHTML =
+						'<i class="bi bi-arrow-repeat me-1"></i>Run & Update';
+				}
+			}
+
+			function bindUI() {
+				document
+					.getElementById('runRefreshBtn')
+					.addEventListener('click', runAndRefreshDashboard);
+				document
+					.getElementById('viewMode')
+					.addEventListener('change', applyFilters);
+				document
+					.getElementById('timeRange')
+					.addEventListener('change', applyFilters);
+				document
+					.getElementById('alertFilter')
+					.addEventListener('change', applyFilters);
+				document.getElementById('minMag').addEventListener('input', (e) => {
+					document.getElementById('minMagValue').textContent = Number(
+						e.target.value,
+					).toFixed(1);
+				});
+				document
+					.getElementById('setAlertBtn')
+					.addEventListener('click', applyFilters);
+				document
+					.getElementById('searchInput')
+					.addEventListener('keyup', () => drawTable(state.filtered));
+			}
+
+			window.addEventListener('DOMContentLoaded', async () => {
+				setClock();
+				setInterval(setClock, 1000);
+
+				bindUI();
+				initMap();
+				setTimeout(
+					() => document.getElementById('loadingOverlay').classList.add('hide'),
+					5000,
+				);
+				await loadDashboard();
+				setInterval(loadDashboard, 30000);
+			});
+		</script>
+	</body>
+</html>
