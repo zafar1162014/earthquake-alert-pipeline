@@ -1,4 +1,5 @@
-from __future__ import annotations
+# Download earthquake data from USGS API for the past 30 days
+# Saves combined global + Pakistan earthquake records to CSV
 
 from datetime import datetime, timedelta, timezone
 from io import StringIO
@@ -7,6 +8,7 @@ from pathlib import Path
 import pandas as pd
 import requests
 
+# Pakistan coordinates for filtering regional earthquakes
 USGS_API_URL = "https://earthquake.usgs.gov/fdsnws/event/1/query"
 PAK_MIN_LAT = 23.0
 PAK_MAX_LAT = 37.0
@@ -77,15 +79,15 @@ def main() -> None:
     }
 
     try:
-        print("Fetching global earthquake data...")
+        print("\n[1] Fetching global earthquake data...")
         global_df = fetch_earthquake_data(global_params, "global")
-        print(f"Global earthquakes downloaded: {len(global_df):,} rows\n")
+        print(f"    → Downloaded {len(global_df):,} earthquakes\n")
 
-        print("Fetching Pakistan region earthquake data...")
+        print("[2] Fetching Pakistan region earthquakes...")
         pakistan_df = fetch_earthquake_data(pakistan_params, "Pakistan")
-        print(f"Pakistan region earthquakes downloaded: {len(pakistan_df):,} rows\n")
+        print(f"    → Downloaded {len(pakistan_df):,} earthquakes\n")
 
-        print("Removing duplicates...")
+        print("[3] Combining and removing duplicates...")
         combined_df = pd.concat([global_df, pakistan_df], ignore_index=True)
 
         dedupe_columns = [column for column in ["time", "mag"] if column in combined_df.columns]
@@ -96,36 +98,26 @@ def main() -> None:
 
         combined_df = assign_region(combined_df)
 
+        # Save CSV to the data folder
         project_root = Path(__file__).resolve().parents[1]
         data_dir = project_root / "data"
         data_dir.mkdir(parents=True, exist_ok=True)
-
         output_file = data_dir / "earthquakes.csv"
         combined_df.to_csv(output_file, index=False)
 
-        pakistan_rows = int((combined_df["region"] == "Pakistan").sum())
-        global_rows = int((combined_df["region"] == "Global").sum())
+        # Show summary of what we downloaded
+        pakistan_count = int((combined_df["region"] == "Pakistan").sum())
+        global_count = int((combined_df["region"] == "Global").sum())
 
-        print(f"Final dataset: {len(combined_df):,} rows\n")
-        print("Summary:")
-        print(f"  Global rows   : {global_rows:,}")
-        print(f"  Pakistan rows : {pakistan_rows:,}\n")
+        print(f"[4] Saved {len(combined_df):,} earthquake records")
+        print(f"    → Global:  {global_count:,}")
+        print(f"    → Pakistan: {pakistan_count:,}")
+        print(f"    → File: {output_file}")
+        print("\n✓ Done!\n")
 
-        preview_columns = [
-            column
-            for column in ["time", "latitude", "longitude", "depth", "mag", "place", "region"]
-            if column in combined_df.columns
-        ]
-
-        print("Preview:")
-        if preview_columns:
-            print(combined_df[preview_columns].head(5).to_string(index=False))
-        else:
-            print(combined_df.head(5).to_string(index=False))
-
-        print(f"\nFile saved to: {output_file}")
-    except Exception as error:  # noqa: BLE001
-        print(f"Error: {error}")
+    except Exception as error:
+        print(f"\n✗ Error: {error}")
+        raise
 
 
 if __name__ == "__main__":
