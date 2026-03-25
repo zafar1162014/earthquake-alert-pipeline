@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Earthquake Alert Pipeline Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background-color: #111827;
+      color: #e5e7eb;
+    }
+
+    .navbar,
+    .card,
+    .table,
+    .table thead,
+    .table tbody,
+    .table tr,
+    .table td,
+    .table th {
+      background-color: #1f2937 !important;
+      color: #e5e7eb !important;
+      border-color: #374151 !important;
+    }
+
+    .card {
+      border: 1px solid #374151;
+    }
+
+    .summary-icon {
+      font-size: 1.5rem;
+      margin-right: 0.5rem;
+    }
+
+    .critical-row {
+      background-color: rgba(220, 38, 38, 0.2) !important;
+    }
+
+    .high-row {
+      background-color: rgba(249, 115, 22, 0.2) !important;
+    }
+
+    .section-title {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+
+    .speedup-image {
+      width: 100%;
+      border-radius: 6px;
+      border: 1px solid #374151;
+      background: #0f172a;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg border-bottom border-secondary">
+    <div class="container-fluid">
+      <span class="navbar-brand mb-0 h1 text-light">
+        <i class="bi bi-globe2 me-2"></i>Earthquake Alert Pipeline
+      </span>
+      <button id="refreshBtn" class="btn btn-outline-info btn-sm">
+        <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+      </button>
+    </div>
+  </nav>
+
+  <main class="container-fluid py-4">
+    <div class="row g-3 mb-4">
+      <div class="col-12 col-md-6 col-xl-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center mb-2">
+              <i class="bi bi-activity text-primary summary-icon"></i>
+              <h6 class="mb-0">Total Earthquakes</h6>
+            </div>
+            <h3 id="totalEarthquakes" class="mb-0">-</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-6 col-xl-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center mb-2">
+              <i class="bi bi-geo-alt-fill text-success summary-icon"></i>
+              <h6 class="mb-0">Pakistan Earthquakes</h6>
+            </div>
+            <h3 id="pakistanEarthquakes" class="mb-0">-</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-6 col-xl-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center mb-2">
+              <i class="bi bi-exclamation-triangle-fill text-danger summary-icon"></i>
+              <h6 class="mb-0">Critical Alerts</h6>
+            </div>
+            <h3 id="criticalAlerts" class="mb-0">-</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-6 col-xl-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center mb-2">
+              <i class="bi bi-exclamation-circle-fill text-warning summary-icon"></i>
+              <h6 class="mb-0">High Alerts</h6>
+            </div>
+            <h3 id="highAlerts" class="mb-0">-</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-12 col-xl-6">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="section-title">Magnitude Distribution</div>
+            <canvas id="magnitudeChart" height="140"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-xl-6">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="section-title">Amdahl Speedup Chart</div>
+            <img id="speedupChart" class="speedup-image" src="/api/speedup-chart" alt="Amdahl Speedup Chart" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-body">
+            <div class="section-title">Recent HIGH and CRITICAL Alerts</div>
+            <div class="table-responsive">
+              <table class="table table-sm align-middle">
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Place</th>
+                    <th>Magnitude</th>
+                    <th>Depth</th>
+                    <th>Region</th>
+                    <th>Alert Level</th>
+                  </tr>
+                </thead>
+                <tbody id="alertsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-12 col-xl-6">
+        <div class="card">
+          <div class="card-body">
+            <div class="section-title">Top 5 Pakistan Hotspots</div>
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Latitude</th>
+                    <th>Longitude</th>
+                    <th>Count</th>
+                  </tr>
+                </thead>
+                <tbody id="pakHotspotsBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-xl-6">
+        <div class="card">
+          <div class="card-body">
+            <div class="section-title">Top 5 Global Hotspots</div>
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Latitude</th>
+                    <th>Longitude</th>
+                    <th>Count</th>
+                  </tr>
+                </thead>
+                <tbody id="globalHotspotsBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let magnitudeChart;
+
+    async function fetchJSON(url) {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Request failed for ${url}: ${response.status}`);
+      }
+      return response.json();
+    }
+
+    function renderMagnitudeChart(labels, counts) {
+      const context = document.getElementById('magnitudeChart');
+      if (magnitudeChart) {
+        magnitudeChart.destroy();
+      }
+
+      magnitudeChart = new Chart(context, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Earthquakes',
+            data: counts,
+            backgroundColor: ['#3b82f6', '#22c55e', '#f59e0b', '#f97316', '#ef4444']
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              labels: { color: '#e5e7eb' }
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#e5e7eb' },
+              grid: { color: '#374151' }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: { color: '#e5e7eb' },
+              grid: { color: '#374151' }
+            }
+          }
+        }
+      });
+    }
+
+    function fillHotspotTable(elementId, hotspots) {
+      const tbody = document.getElementById(elementId);
+      tbody.innerHTML = '';
+      hotspots.slice(0, 5).forEach((item) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${item.latitude}</td>
+          <td>${item.longitude}</td>
+          <td>${item.count}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function fillAlertsTable(alerts) {
+      const tbody = document.getElementById('alertsTableBody');
+      tbody.innerHTML = '';
+
+      const filtered = alerts.filter((a) => a.alert_level === 'CRITICAL' || a.alert_level === 'HIGH');
+      filtered.forEach((alert) => {
+        const row = document.createElement('tr');
+        if (alert.alert_level === 'CRITICAL') {
+          row.classList.add('critical-row');
+        } else if (alert.alert_level === 'HIGH') {
+          row.classList.add('high-row');
+        }
+
+        row.innerHTML = `
+          <td>${alert.time ?? '-'}</td>
+          <td>${alert.place ?? '-'}</td>
+          <td>${alert.mag ?? '-'}</td>
+          <td>${alert.depth ?? '-'}</td>
+          <td>${alert.region ?? '-'}</td>
+          <td>${alert.alert_level ?? '-'}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    async function loadDashboard() {
+      try {
+        const [summary, magnitude, pakistanHotspots, globalHotspots, recentAlerts] = await Promise.all([
+          fetchJSON('/api/summary'),
+          fetchJSON('/api/magnitude-chart'),
+          fetchJSON('/api/pakistan-hotspots'),
+          fetchJSON('/api/global-hotspots'),
+          fetchJSON('/api/recent-alerts')
+        ]);
+
+        document.getElementById('totalEarthquakes').textContent = summary.total_earthquakes;
+        document.getElementById('pakistanEarthquakes').textContent = summary.total_pakistan_earthquakes;
+        document.getElementById('criticalAlerts').textContent = summary.total_critical_alerts;
+        document.getElementById('highAlerts').textContent = summary.total_high_alerts;
+
+        renderMagnitudeChart(magnitude.labels, magnitude.counts);
+        fillHotspotTable('pakHotspotsBody', pakistanHotspots.hotspots || []);
+        fillHotspotTable('globalHotspotsBody', globalHotspots.hotspots || []);
+        fillAlertsTable(recentAlerts.alerts || []);
+
+        document.getElementById('speedupChart').src = `/api/speedup-chart?t=${Date.now()}`;
+      } catch (error) {
+        console.error(error);
+        alert('Failed to load dashboard data. Check server logs.');
+      }
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
+    window.addEventListener('DOMContentLoaded', loadDashboard);
+  </script>
+</body>
+</html>
