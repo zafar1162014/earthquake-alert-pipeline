@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 
 import pandas as pd
-from flask import Flask, jsonify, render_template, send_file
+from flask import Flask, jsonify, render_template, request, send_file
 
 # =============================
 # EarthquakeWatch Configuration
@@ -13,6 +15,7 @@ CSV_PATH = BASE_DIR / "data" / "earthquakes.csv"
 OUTPUT_DIR = BASE_DIR / "output"
 SPEEDUP_CHART_PATH = OUTPUT_DIR / "speedup_chart.png"
 APP_NAME = "EarthquakeWatch"
+SCRIPTS_DIR = BASE_DIR / "scripts"
 
 app = Flask(__name__)
 
@@ -93,6 +96,48 @@ def serialize_earthquakes(dataframe: pd.DataFrame) -> list[dict]:
     return response
 
 
+def run_python_script(script_name: str, timeout_seconds: int = 300) -> dict:
+    script_path = SCRIPTS_DIR / script_name
+    if not script_path.exists():
+        return {
+            "script": script_name,
+            "success": False,
+            "return_code": -1,
+            "output": f"Script not found: {script_path}",
+        }
+
+    try:
+        completed = subprocess.run(
+            [sys.executable, str(script_path)],
+            cwd=str(BASE_DIR),
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+            check=False,
+        )
+        output = (completed.stdout or "") + ("\n" + completed.stderr if completed.stderr else "")
+        return {
+            "script": script_name,
+            "success": completed.returncode == 0,
+            "return_code": completed.returncode,
+            "output": output.strip(),
+        }
+    except subprocess.TimeoutExpired:
+        return {
+            "script": script_name,
+            "success": False,
+            "return_code": -2,
+            "output": f"Timed out after {timeout_seconds}s",
+        }
+    except Exception as error:  # noqa: BLE001
+        return {
+            "script": script_name,
+            "success": False,
+            "return_code": -3,
+            "output": str(error),
+        }
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -168,6 +213,30 @@ def api_speedup():
     if not SPEEDUP_CHART_PATH.exists():
         return jsonify({"error": f"Speedup chart not found: {SPEEDUP_CHART_PATH}"}), 404
     return send_file(SPEEDUP_CHART_PATH, mimetype="image/png")
+
+
+@app.route("/api/refresh-run", methods=["POST"])
+def api_refresh_run():
+    try:
+        payload = request.get_json(silent=True) or {}
+        include_benchmark = bool(payload.get("includeBenchmark", False))
+
+        scripts_to_run = ["01_download_data.py"]
+        if include_benchmark:
+            scripts_to_run.append("07_amdahl.py")
+
+        results = [run_python_script(script_name) for script_name in scripts_to_run]
+        all_success = all(result["success"] for result in results)
+
+        return jsonify(
+            {
+                "success": all_success,
+                "message": "Refresh run completed" if all_success else "Refresh run finished with errors",
+                "results": results,
+            }
+        ), (200 if all_success else 500)
+    except Exception as error:  # noqa: BLE001
+        return jsonify({"success": False, "error": str(error)}), 500
 
 
 if __name__ == "__main__":
