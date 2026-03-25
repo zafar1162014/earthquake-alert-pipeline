@@ -135,7 +135,13 @@ def build_chart(output_file: Path, times: dict[int, float], actual_speedups: dic
 
     figure.tight_layout()
     figure.savefig(output_file, dpi=200)
-    plt.show()
+    try:
+        plt.show(block=False)
+        plt.pause(2)
+    except Exception:
+        pass
+    finally:
+        plt.close(figure)
 
 
 def main() -> None:
