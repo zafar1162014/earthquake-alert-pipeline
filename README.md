@@ -98,7 +98,7 @@ Screenshots folder on this repo:
 
 Save your screenshots in `docs/screenshots/` with these names:
 
-- `dashboard-01-overview.png`
+- `dashboard-01-overview-v2.png`
 - `dashboard-02-filters-map.png`
 - `dashboard-03-charts-table.png`
 - `dashboard-04-alerts-table.png`
@@ -106,7 +106,7 @@ Save your screenshots in `docs/screenshots/` with these names:
 
 Direct links to each screenshot file:
 
-- [Dashboard Overview](docs/screenshots/dashboard-01-overview.png)
+- [Dashboard Overview](docs/screenshots/dashboard-01-overview-v2.png)
 - [Filters and Live Map](docs/screenshots/dashboard-02-filters-map.png)
 - [Charts and Recent Alerts](docs/screenshots/dashboard-03-charts-table.png)
 - [Alerts Section](docs/screenshots/dashboard-04-alerts-table.png)
@@ -114,7 +114,7 @@ Direct links to each screenshot file:
 
 Inline preview (works after image files are uploaded to the folder):
 
-![Dashboard Overview](docs/screenshots/dashboard-01-overview.png)
+![Dashboard Overview](docs/screenshots/dashboard-01-overview-v2.png)
 
 ![Filters and Live Map](docs/screenshots/dashboard-02-filters-map.png)
 
