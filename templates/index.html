@@ -258,13 +258,13 @@
 					id="runRefreshBtn"
 					class="btn btn-info btn-sm fw-semibold"
 					title="Run scripts and refresh dashboard">
-					<i class="bi bi-arrow-repeat me-1"></i>Run & Update
+					<i class="bi bi-arrow-repeat me-1"></i>Refresh Dashboard
 				</button>
 				<div class="clock-box">
 					<div
 						id="clockNow"
 						class="clock-time">
-						--:--:--
+						Loading time...
 					</div>
 					<div
 						id="clockDate"
@@ -1108,8 +1108,8 @@
 				if (!button || !status) return;
 
 				button.disabled = true;
-				button.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Running...';
-				status.textContent = 'Running refresh script and updating data...';
+				button.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Refreshing...';
+				status.textContent = 'Refreshing data and updating dashboard...';
 
 				try {
 					const response = await fetch('/api/refresh-run', {
@@ -1130,12 +1130,12 @@
 						status.textContent = `Refresh finished with errors${firstFailed ? ` (${firstFailed.script})` : ''}.`;
 					}
 				} catch (error) {
-					console.error('Run & Update failed', error);
-					status.textContent = 'Failed to run refresh script.';
+					console.error('Refresh failed', error);
+					status.textContent = 'Failed to refresh dashboard data.';
 				} finally {
 					button.disabled = false;
 					button.innerHTML =
-						'<i class="bi bi-arrow-repeat me-1"></i>Run & Update';
+						'<i class="bi bi-arrow-repeat me-1"></i>Refresh Dashboard';
 				}
 			}
 

@@ -2,6 +2,21 @@
 
 EarthquakeWatch is a student project that tracks earthquake activity using a Flask dashboard, pandas data processing, and Spark scripts for batch and streaming tasks. It focuses on global activity with extra attention to Pakistan.
 
+## About
+
+- Description: Real-time earthquake monitoring dashboard using Flask, Hadoop, and Spark.
+- Website: http://localhost:5001
+- Suggested topics for GitHub repo: flask, pyspark, hadoop, earthquake, data-pipeline, streaming, dashboard, pandas, chartjs, leaflet
+
+## Resources
+
+- Live dashboard (local): http://localhost:5001
+- API summary endpoint: /api/summary
+- API earthquakes endpoint: /api/earthquakes
+- Project scripts: [scripts](scripts)
+- Dashboard template: [templates/index.html](templates/index.html)
+- Screenshots: [docs/screenshots](docs/screenshots)
+
 ## What this project does
 
 - Downloads earthquake data from the USGS feed
