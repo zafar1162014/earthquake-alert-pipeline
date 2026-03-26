@@ -77,6 +77,10 @@ Note: Port 5001 is used in this project to avoid common macOS conflicts on 5000.
 
 ## Dashboard screenshots
 
+Screenshots folder on this repo:
+
+- [docs/screenshots](docs/screenshots)
+
 Save your screenshots in `docs/screenshots/` with these names:
 
 - `dashboard-01-overview.png`
@@ -85,7 +89,15 @@ Save your screenshots in `docs/screenshots/` with these names:
 - `dashboard-04-alerts-table.png`
 - `dashboard-05-benchmark.png`
 
-Then README will show them here:
+Direct links to each screenshot file:
+
+- [Dashboard Overview](docs/screenshots/dashboard-01-overview.png)
+- [Filters and Live Map](docs/screenshots/dashboard-02-filters-map.png)
+- [Charts and Recent Alerts](docs/screenshots/dashboard-03-charts-table.png)
+- [Alerts Section](docs/screenshots/dashboard-04-alerts-table.png)
+- [Amdahl Benchmark](docs/screenshots/dashboard-05-benchmark.png)
+
+Inline preview (works after image files are uploaded to the folder):
 
 ![Dashboard Overview](docs/screenshots/dashboard-01-overview.png)
 
