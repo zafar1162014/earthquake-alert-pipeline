@@ -40,25 +40,25 @@ EarthquakeWatch is a student project that tracks earthquake activity using a Fla
 
 ## How to run (step by step)
 
-1) Create and activate a virtual environment
+1. Create and activate a virtual environment
 
 - macOS/Linux:
   - python3 -m venv .venv
   - source .venv/bin/activate
 
-2) Install dependencies
+2. Install dependencies
 
 - pip install -r requirements.txt
 
-3) Download fresh earthquake data
+3. Download fresh earthquake data
 
 - python scripts/01_download_data.py
 
-4) Start the dashboard
+4. Start the dashboard
 
 - python app.py
 
-5) Open in browser
+5. Open in browser
 
 - http://localhost:5001
 
@@ -74,6 +74,28 @@ Note: Port 5001 is used in this project to avoid common macOS conflicts on 5000.
 - GET /api/recent - Last 100 rows by latest time
 - GET /api/speedup - speedup_chart.png
 - POST /api/refresh-run - Re-run data refresh script from dashboard
+
+## Dashboard screenshots
+
+Save your screenshots in `docs/screenshots/` with these names:
+
+- `dashboard-01-overview.png`
+- `dashboard-02-filters-map.png`
+- `dashboard-03-charts-table.png`
+- `dashboard-04-alerts-table.png`
+- `dashboard-05-benchmark.png`
+
+Then README will show them here:
+
+![Dashboard Overview](docs/screenshots/dashboard-01-overview.png)
+
+![Filters and Live Map](docs/screenshots/dashboard-02-filters-map.png)
+
+![Charts and Recent Alerts](docs/screenshots/dashboard-03-charts-table.png)
+
+![Alerts Section](docs/screenshots/dashboard-04-alerts-table.png)
+
+![Amdahl Benchmark](docs/screenshots/dashboard-05-benchmark.png)
 
 ## Troubleshooting
 
