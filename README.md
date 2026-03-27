@@ -1,48 +1,26 @@
 # EarthquakeWatch
 
-EarthquakeWatch is a student project that tracks earthquake activity using a Flask dashboard, pandas data processing, and Spark scripts for batch and streaming tasks. It focuses on global activity with extra attention to Pakistan.
+EarthquakeWatch is a real-time earthquake monitoring pipeline and dashboard built with Flask, pandas, and PySpark. It combines historical and near-live processing workflows to support data collection, analysis, hotspot detection, and alert generation.
 
-## About
+## Overview
 
-- Description: Real-time earthquake monitoring dashboard using Flask, Hadoop, and Spark.
-- Website: http://localhost:5001
-- Suggested topics for GitHub repo: flask, pyspark, hadoop, earthquake, data-pipeline, streaming, dashboard, pandas, chartjs, leaflet
+This project is designed to:
 
-## Resources
+- Collect earthquake data from the USGS feed.
+- Process and classify records for global and Pakistan-focused analysis.
+- Present interactive visualizations through a web dashboard.
+- Run Spark batch analytics for trends and hotspot summaries.
+- Simulate streaming alerts using socket-based feed and Spark streaming logic.
+- Compare theoretical versus practical speedup using Amdahl's Law.
 
-- Live dashboard (local): http://localhost:5001
-- API summary endpoint: /api/summary
-- API earthquakes endpoint: /api/earthquakes
-- Project scripts: [scripts](scripts)
-- Dashboard template: [templates/index.html](templates/index.html)
-- Screenshots: [docs/screenshots](docs/screenshots)
+## Key Features
 
-## What this project does
+- Flask dashboard with summary cards, charts, map layers, and tables.
+- REST API endpoints for summary, regional filtering, recent events, and hotspots.
+- Modular script pipeline for data download, batch jobs, streaming, and benchmarking.
+- Optional Hadoop HDFS integration for distributed storage workflows.
 
-- Downloads earthquake data from the USGS feed
-- Labels records as Pakistan or Global based on coordinates
-- Shows summary cards, maps, charts, and a data table in a web dashboard
-- Runs Spark batch analysis for trends and top locations
-- Runs a simple streaming pipeline for live-style alerts
-- Benchmarks multi-core speedup using Amdahl's Law
-
-## Project structure
-
-- app.py - Flask backend and API routes
-- requirements.txt - Python packages used by this project
-- data/earthquakes.csv - Main dataset used by dashboard and scripts
-- output/ - Generated files like speedup chart
-- scripts/ - Pipeline scripts
-  - 01_download_data.py - Downloads and prepares CSV data
-  - 02_upload_hdfs.sh - Uploads CSV to Hadoop HDFS
-  - 03_batch_analysis.py - Spark batch analysis
-  - 04_hotspot.py - Spark hotspot detection by coordinate grid
-  - 05_stream_feed.py - Sends CSV rows over socket as a stream
-  - 06_stream_alert.py - Reads stream in Spark and classifies alerts
-  - 07_amdahl.py - Compares actual and theoretical speedup
-- templates/index.html - Dashboard UI
-
-## Technologies used
+## Tech Stack
 
 - Python
 - Flask
@@ -50,94 +28,88 @@ EarthquakeWatch is a student project that tracks earthquake activity using a Fla
 - requests
 - PySpark
 - matplotlib
-- Hadoop HDFS (optional for HDFS paths)
-- Leaflet, Chart.js, Three.js (frontend)
+- Hadoop HDFS (optional)
+- Leaflet, Chart.js, Three.js
 
-## How to run (step by step)
+## Repository Structure
 
-1. Create and activate a virtual environment
+- `app.py`: Flask application and API routes.
+- `requirements.txt`: Project dependencies.
+- `data/earthquakes.csv`: Primary dataset used by dashboard and scripts.
+- `output/`: Generated assets such as benchmark charts.
+- `scripts/`: Data and analytics pipeline scripts.
+- `templates/index.html`: Dashboard front-end template.
+- `docs/screenshots/`: Dashboard screenshots.
 
-- macOS/Linux:
-  - python3 -m venv .venv
-  - source .venv/bin/activate
+## Pipeline Scripts
 
-2. Install dependencies
+- `scripts/01_download_data.py`: Download and prepare earthquake CSV data.
+- `scripts/02_upload_hdfs.sh`: Upload prepared data to HDFS.
+- `scripts/03_batch_analysis.py`: Run Spark batch analysis.
+- `scripts/04_hotspot.py`: Detect hotspot cells using coordinate grids.
+- `scripts/05_stream_feed.py`: Stream CSV rows over socket.
+- `scripts/06_stream_alert.py`: Consume stream and classify alerts in Spark.
+- `scripts/07_amdahl.py`: Generate Amdahl speedup comparison.
 
-- pip install -r requirements.txt
+## Getting Started
 
-3. Download fresh earthquake data
+### Prerequisites
 
-- python scripts/01_download_data.py
+- Python 3.10+
+- Java (required for PySpark)
+- Apache Spark (required for Spark scripts)
+- Hadoop (optional, for HDFS workflow)
 
-4. Start the dashboard
+### Installation
 
-- python app.py
+1. Clone the repository.
+2. Create and activate a virtual environment.
+3. Install dependencies.
 
-5. Open in browser
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-- http://localhost:5001
+### Run the Project
 
-Note: Port 5001 is used in this project to avoid common macOS conflicts on 5000.
+1. Download fresh data:
 
-## API endpoints
+```bash
+python scripts/01_download_data.py
+```
 
-- GET / - Dashboard page
-- GET /api/summary - Totals and magnitude stats
-- GET /api/earthquakes - All rows with alert_level
-- GET /api/hotspots - Top 20 hotspot cells
-- GET /api/pakistan - Pakistan-only rows
-- GET /api/recent - Last 100 rows by latest time
-- GET /api/speedup - speedup_chart.png
-- POST /api/refresh-run - Re-run data refresh script from dashboard
+2. Start the dashboard:
 
-## Dashboard screenshots
+```bash
+python app.py
+```
 
-Screenshots folder on this repo:
+3. Open the dashboard in your browser at the configured host and port.
 
-- [docs/screenshots](docs/screenshots)
+## API Endpoints
 
-Save your screenshots in `docs/screenshots/` with these names:
+- `GET /`: Dashboard page.
+- `GET /api/summary`: Aggregated totals and magnitude statistics.
+- `GET /api/earthquakes`: Full earthquake dataset with alert levels.
+- `GET /api/hotspots`: Top hotspot cells.
+- `GET /api/pakistan`: Pakistan-only records.
+- `GET /api/recent`: Most recent records.
+- `GET /api/speedup`: Generated benchmark chart.
+- `POST /api/refresh-run`: Trigger data refresh script.
 
-- `dashboard-01-overview-v2.png`
-- `dashboard-02-filters-map.png`
-- `dashboard-03-charts-table.png`
-- `dashboard-04-alerts-table.png`
-- `dashboard-05-benchmark.png`
+## Screenshots
 
-Direct links to each screenshot file:
-
-- [Dashboard Overview](docs/screenshots/dashboard-01-overview-v2.png)
-- [Filters and Live Map](docs/screenshots/dashboard-02-filters-map.png)
-- [Charts and Recent Alerts](docs/screenshots/dashboard-03-charts-table.png)
-- [Alerts Section](docs/screenshots/dashboard-04-alerts-table.png)
-- [Amdahl Benchmark](docs/screenshots/dashboard-05-benchmark.png)
-
-Inline preview (works after image files are uploaded to the folder):
-
-![Dashboard Overview](docs/screenshots/dashboard-01-overview-v2.png)
-
-![Filters and Live Map](docs/screenshots/dashboard-02-filters-map.png)
-
-![Charts and Recent Alerts](docs/screenshots/dashboard-03-charts-table.png)
-
-![Alerts Section](docs/screenshots/dashboard-04-alerts-table.png)
-
-![Amdahl Benchmark](docs/screenshots/dashboard-05-benchmark.png)
+Screenshots are available in [docs/screenshots](docs/screenshots).
 
 ## Troubleshooting
 
-If dashboard keeps loading:
+- If the dashboard does not load, verify the Flask server is running.
+- If data is missing, rerun `scripts/01_download_data.py`.
+- If Spark jobs fail, verify Java and Spark installation.
+- If HDFS upload fails, confirm Hadoop services are active.
 
-- Check backend is running: open /api/summary in browser
-- If port is busy, stop old process and start app again
-- If CSV is missing, run python scripts/01_download_data.py
-- If refresh button fails, check terminal logs for script errors
+## License
 
-If Spark scripts fail:
-
-- Make sure Java and Spark are installed
-- For HDFS scripts, make sure Hadoop services are running
-
-## GitHub
-
-https://github.com/zafar1162014/earthquake-alert-pipeline
+This repository is intended for educational and demonstration use.
