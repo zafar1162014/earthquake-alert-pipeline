@@ -103,6 +103,22 @@ python app.py
 
 Screenshots are available in [docs/screenshots](docs/screenshots).
 
+- [Dashboard Overview](docs/screenshots/dashboard-01-overview-v2.png)
+- [Filters and Live Map](docs/screenshots/dashboard-02-filters-map.png)
+- [Charts and Recent Alerts](docs/screenshots/dashboard-03-charts-table.png)
+- [Alerts Section](docs/screenshots/dashboard-04-alerts-table.png)
+- [Amdahl Benchmark](docs/screenshots/dashboard-05-benchmark.png)
+
+![Dashboard Overview](docs/screenshots/dashboard-01-overview-v2.png)
+
+![Filters and Live Map](docs/screenshots/dashboard-02-filters-map.png)
+
+![Charts and Recent Alerts](docs/screenshots/dashboard-03-charts-table.png)
+
+![Alerts Section](docs/screenshots/dashboard-04-alerts-table.png)
+
+![Amdahl Benchmark](docs/screenshots/dashboard-05-benchmark.png)
+
 ## Troubleshooting
 
 - If the dashboard does not load, verify the Flask server is running.
