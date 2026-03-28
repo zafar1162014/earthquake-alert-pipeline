@@ -1479,6 +1479,17 @@
 				const status = document.getElementById('runStatus');
 				if (!button || !status) return;
 
+				const host = String(window.location.hostname || '');
+				if (host.endsWith('.vercel.app')) {
+					status.textContent =
+						'Refresh is disabled on deployment. Run refresh scripts locally.';
+					button.disabled = true;
+					button.title = 'Refresh is disabled on deployed serverless mode';
+					button.innerHTML =
+						'<i class="bi bi-cloud-slash me-1"></i>Refresh Disabled';
+					return;
+				}
+
 				button.disabled = true;
 				button.innerHTML =
 					'<i class="bi bi-arrow-repeat me-1"></i>Refreshing...';
@@ -1518,6 +1529,11 @@
 							return;
 						}
 
+						if (result.message) {
+							status.textContent = result.message;
+							return;
+						}
+
 						const firstFailed = (result.results || []).find(
 							(item) => !item.success,
 						);
@@ -1544,6 +1560,10 @@
 				if (host.endsWith('.vercel.app')) {
 					status.textContent =
 						'Deployed mode detected: data refresh scripts run locally only.';
+					button.disabled = true;
+					button.title = 'Refresh is disabled on deployed serverless mode';
+					button.innerHTML =
+						'<i class="bi bi-cloud-slash me-1"></i>Refresh Disabled';
 				}
 			}
 
