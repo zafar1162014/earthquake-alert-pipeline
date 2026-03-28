@@ -531,9 +531,10 @@
 							<p style="font-size: 0.9rem; margin-bottom: 0.8rem; color: var(--muted);">
 								Stay informed with instant push notifications when critical earthquakes occur. Get alerts directly to your device without missing important seismic events.
 							</p>
-							<button class="btn btn-info btn-sm" onclick="enableNotifications()" style="font-weight: 500;">
+							<button id="enableNotificationsBtn" class="btn btn-info btn-sm" style="font-weight: 500;">
 								<i class="bi bi-bell me-1"></i>Enable Now
 							</button>
+							<div id="notificationStatus" class="small mt-2 text-subtle">Notifications are currently off.</div>
 						</div>
 					</div>
 					<div class="col-12 col-md-6">
@@ -580,6 +581,11 @@
 		</main>
 
 		<script>
+			const NOTIFICATION_ICON =
+				'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%230ea5e9"/><text x="50" y="60" font-size="50" text-anchor="middle" fill="white">🌍</text></svg>';
+			const NOTIFY_ENABLED_KEY = 'eqwatch_notify_enabled';
+			const NOTIFY_LAST_SEEN_KEY = 'eqwatch_notify_last_seen';
+
 			const COLORS = {
 				CRITICAL: '#ff4444',
 				HIGH: '#ff8800',
@@ -587,6 +593,11 @@
 				LOW: '#00ff88',
 			};
 			const state = { all: [], filtered: [] };
+			const notificationState = {
+				enabled: false,
+				lastSeenMillis: 0,
+				initialized: false,
+			};
 
 			let map, mapLayer;
 			let chartMagnitude, chartAlerts, chartFrequency;
@@ -623,25 +634,154 @@
 				return 'LOW';
 			}
 
-			function enableNotifications() {
+			function setNotificationStatus(message) {
+				const statusElement = document.getElementById('notificationStatus');
+				if (statusElement) statusElement.textContent = message;
+			}
+
+			function syncNotificationUI() {
+				const button = document.getElementById('enableNotificationsBtn');
+				if (!button) return;
+				if (!("Notification" in window)) {
+					button.disabled = true;
+					button.innerHTML = '<i class="bi bi-bell-slash me-1"></i>Not Supported';
+					setNotificationStatus('This browser does not support notifications.');
+					return;
+				}
+
+				const permission = Notification.permission;
+				if (permission === 'granted' && notificationState.enabled) {
+					button.disabled = false;
+					button.innerHTML = '<i class="bi bi-bell-fill me-1"></i>Enabled';
+					setNotificationStatus('Notifications are enabled. New critical earthquakes will alert instantly.');
+					return;
+				}
+
+				if (permission === 'denied') {
+					button.disabled = true;
+					button.innerHTML = '<i class="bi bi-bell-slash me-1"></i>Blocked';
+					setNotificationStatus('Notifications are blocked in browser settings.');
+					return;
+				}
+
+				button.disabled = false;
+				button.innerHTML = '<i class="bi bi-bell me-1"></i>Enable Now';
+				setNotificationStatus('Notifications are currently off. Click Enable Now.');
+			}
+
+			function loadNotificationState() {
+				notificationState.enabled = localStorage.getItem(NOTIFY_ENABLED_KEY) === '1';
+				notificationState.lastSeenMillis = Number(
+					localStorage.getItem(NOTIFY_LAST_SEEN_KEY) || 0,
+				);
+				notificationState.initialized = false;
+				syncNotificationUI();
+			}
+
+			function getLatestEventMillis(data) {
+				if (!Array.isArray(data) || data.length === 0) return 0;
+				return data.reduce(
+					(maxValue, event) => Math.max(maxValue, parseTimeMillis(event.time)),
+					0,
+				);
+			}
+
+			function ensureNotificationBaseline(data) {
+				if (notificationState.initialized) return;
+				notificationState.initialized = true;
+				if (notificationState.lastSeenMillis > 0) return;
+
+				notificationState.lastSeenMillis = getLatestEventMillis(data);
+				localStorage.setItem(
+					NOTIFY_LAST_SEEN_KEY,
+					String(notificationState.lastSeenMillis),
+				);
+			}
+
+			async function enableNotifications() {
 				if (!('Notification' in window)) {
-					alert('This browser does not support notifications.');
+					setNotificationStatus('This browser does not support notifications.');
 					return;
 				}
+
 				if (Notification.permission === 'granted') {
-					alert('Notifications are already enabled!');
+					notificationState.enabled = true;
+					localStorage.setItem(NOTIFY_ENABLED_KEY, '1');
+					notificationState.lastSeenMillis = getLatestEventMillis(state.all);
+					localStorage.setItem(
+						NOTIFY_LAST_SEEN_KEY,
+						String(notificationState.lastSeenMillis),
+					);
+					syncNotificationUI();
+					new Notification('EarthquakeWatch Alerts Enabled', {
+						body: 'You will now receive real-time critical earthquake alerts.',
+						icon: NOTIFICATION_ICON,
+					});
 					return;
 				}
-				if (Notification.permission !== 'denied') {
-					Notification.requestPermission().then((permission) => {
-						if (permission === 'granted') {
-							new Notification('🌍 EarthquakeWatch', {
-								body: 'Real-time earthquake alerts enabled! You will receive notifications for critical events.',
-								icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%230ea5e9"/><text x="50" y="60" font-size="50" text-anchor="middle" fill="white">🌍</text></svg>',
-							});
-						}
-					});
+
+				if (Notification.permission === 'denied') {
+					notificationState.enabled = false;
+					localStorage.setItem(NOTIFY_ENABLED_KEY, '0');
+					syncNotificationUI();
+					return;
 				}
+
+				const permission = await Notification.requestPermission();
+				if (permission === 'granted') {
+					notificationState.enabled = true;
+					localStorage.setItem(NOTIFY_ENABLED_KEY, '1');
+					notificationState.lastSeenMillis = getLatestEventMillis(state.all);
+					localStorage.setItem(
+						NOTIFY_LAST_SEEN_KEY,
+						String(notificationState.lastSeenMillis),
+					);
+					syncNotificationUI();
+					new Notification('EarthquakeWatch Alerts Enabled', {
+						body: 'You will now receive real-time critical earthquake alerts.',
+						icon: NOTIFICATION_ICON,
+					});
+				} else {
+					notificationState.enabled = false;
+					localStorage.setItem(NOTIFY_ENABLED_KEY, '0');
+					syncNotificationUI();
+				}
+			}
+
+			function notifyCriticalEvents(data) {
+				if (!notificationState.enabled) return;
+				if (!("Notification" in window)) return;
+				if (Notification.permission !== 'granted') return;
+
+				ensureNotificationBaseline(data);
+				const criticalEvents = sortByTimeDesc(data).filter(
+					(event) => event.alert_level === 'CRITICAL',
+				);
+				const freshCriticalEvents = criticalEvents
+					.filter(
+						(event) => parseTimeMillis(event.time) > notificationState.lastSeenMillis,
+					)
+					.sort((a, b) => parseTimeMillis(a.time) - parseTimeMillis(b.time));
+
+				if (freshCriticalEvents.length === 0) return;
+
+				freshCriticalEvents.slice(-3).forEach((event) => {
+					const mag = Number(event.mag || 0).toFixed(1);
+					const location = event.place || event.region || 'Unknown location';
+					new Notification('Critical Earthquake Alert', {
+						body: `M${mag} - ${location}`,
+						icon: NOTIFICATION_ICON,
+					});
+				});
+
+				notificationState.lastSeenMillis = Math.max(
+					notificationState.lastSeenMillis,
+					...freshCriticalEvents.map((event) => parseTimeMillis(event.time)),
+				);
+				localStorage.setItem(
+					NOTIFY_LAST_SEEN_KEY,
+					String(notificationState.lastSeenMillis),
+				);
 			}
 
 			async function getJSON(url) {
@@ -1092,6 +1232,8 @@
 						alert_level: eq.alert_level || alertLevel(Number(eq.mag || 0)),
 					}));
 
+					notifyCriticalEvents(state.all);
+
 					applyFilters();
 					document.getElementById('speedupImage').src =
 						`/api/speedup?t=${Date.now()}`;
@@ -1141,6 +1283,9 @@
 
 			function bindUI() {
 				document
+					.getElementById('enableNotificationsBtn')
+					.addEventListener('click', enableNotifications);
+				document
 					.getElementById('runRefreshBtn')
 					.addEventListener('click', runAndRefreshDashboard);
 				document
@@ -1168,6 +1313,7 @@
 			window.addEventListener('DOMContentLoaded', async () => {
 				setClock();
 				setInterval(setClock, 1000);
+				loadNotificationState();
 
 				bindUI();
 				initMap();

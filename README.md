@@ -88,6 +88,32 @@ python app.py
 
 3. Open the dashboard in your browser at the configured host and port.
 
+## Deploy to Vercel
+
+This repository is ready for Vercel deployment using the included `vercel.json`.
+
+### 1. Commit and push
+
+```bash
+git add .
+git commit -m "Prepare Vercel deployment"
+git push origin main
+```
+
+### 2. Deploy with Vercel CLI
+
+```bash
+npm i -g vercel
+vercel login
+vercel --prod
+```
+
+### Notes
+
+- Vercel runs the Flask app from `app.py` via `@vercel/python`.
+- `/api/refresh-run` is disabled on Vercel serverless (returns HTTP 501). Run refresh scripts locally when needed.
+- Ensure `data/earthquakes.csv` exists in the repository before deployment.
+
 ## API Endpoints
 
 - `GET /`: Dashboard page.

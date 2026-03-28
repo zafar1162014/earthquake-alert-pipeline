@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 import subprocess
 import sys
 
@@ -202,6 +203,13 @@ def api_speedup():
 def api_refresh_run():
     # Run refresh scripts and return execution status
     try:
+        # Serverless instances should not run local refresh scripts.
+        if os.environ.get("VERCEL"):
+            return jsonify({
+                "success": False,
+                "error": "Refresh is not available on Vercel. Run scripts locally instead.",
+            }), 501
+
         payload = request.get_json(silent=True) or {}
         include_benchmark = bool(payload.get("includeBenchmark", False))
 
