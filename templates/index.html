@@ -36,9 +36,10 @@
 
 		<style>
 			:root {
-				--bg: #f4f8ff;
+				--bg: #eef5ff;
 				--panel: #ffffff;
 				--blue: #0ea5e9;
+				--blue-dark: #0369a1;
 				--red: #ef4444;
 				--orange: #f97316;
 				--yellow: #facc15;
@@ -48,54 +49,124 @@
 			}
 			body {
 				margin: 0;
-				background: var(--bg);
+				background:
+					radial-gradient(
+						circle at 8% 14%,
+						rgba(14, 165, 233, 0.18),
+						transparent 35%
+					),
+					radial-gradient(
+						circle at 90% 5%,
+						rgba(56, 189, 248, 0.15),
+						transparent 28%
+					),
+					linear-gradient(180deg, #f8fbff 0%, var(--bg) 55%, #f4f8ff 100%);
 				color: var(--text);
-				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Rajdhani', sans-serif;
+				font-family:
+					-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Rajdhani', sans-serif;
 				font-weight: 400;
 				line-height: 1.6;
 				-webkit-font-smoothing: antialiased;
 				-moz-osx-font-smoothing: grayscale;
+				overflow-x: hidden;
 			}
 			.brand-font {
 				font-family: 'Orbitron', sans-serif;
 				font-weight: 700;
 				letter-spacing: 0.5px;
 			}
+			main.container-fluid {
+				max-width: 1360px;
+			}
 			.topbar {
 				position: sticky;
 				top: 0;
 				z-index: 1000;
-				background: #ffffff;
-				border-bottom: 1px solid rgba(14, 165, 233, 0.25);
+				background: rgba(255, 255, 255, 0.88);
+				backdrop-filter: blur(8px);
+				border-bottom: 1px solid rgba(14, 165, 233, 0.18);
+			}
+			.topbar-inner {
+				min-height: 56px;
+			}
+			.brand-chip {
+				display: inline-flex;
+				align-items: center;
+				gap: 8px;
+				padding: 0.25rem 0.65rem;
+				border-radius: 999px;
+				border: 1px solid rgba(14, 165, 233, 0.24);
+				background: linear-gradient(180deg, #ffffff, #f0f9ff);
 			}
 			.hero {
-				padding: 1.2rem 0 0.5rem;
-				text-align: center;
+				padding: 1.4rem 0 0.8rem;
+				text-align: left;
+			}
+			.hero-kicker {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.45rem;
+				padding: 0.25rem 0.7rem;
+				border-radius: 999px;
+				font-size: 0.8rem;
+				font-weight: 600;
+				color: var(--blue-dark);
+				background: rgba(14, 165, 233, 0.1);
+				border: 1px solid rgba(14, 165, 233, 0.22);
+				margin-bottom: 0.55rem;
 			}
 			.hero h1 {
 				margin: 0;
-				color: var(--blue);
-				text-shadow: 0 0 8px rgba(14, 165, 233, 0.25);
+				color: #0b335d;
+				text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
 				font-size: clamp(1.8rem, 6vw, 3.2rem);
 				font-weight: 700;
 				letter-spacing: -1px;
 			}
+			.hero p {
+				margin: 0.25rem 0 0;
+				font-size: 1rem;
+				color: #33557b;
+			}
 			.panel {
 				background: linear-gradient(180deg, #ffffff, #f8fbff);
 				border: 1px solid rgba(14, 165, 233, 0.2);
-				border-radius: 12px;
-				box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
-				padding: 0.9rem;
-				margin-bottom: 0.9rem;
+				border-radius: 16px;
+				box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+				padding: 1rem;
+				margin-bottom: 1rem;
+			}
+			.panel h5,
+			.panel h6 {
+				font-weight: 700;
+				letter-spacing: 0.1px;
 			}
 			.summary-card {
-				border-radius: 10px;
+				position: relative;
+				overflow: hidden;
+				border-radius: 14px;
 				border: 1px solid rgba(14, 165, 233, 0.22);
-				background: #ffffff;
+				background: linear-gradient(180deg, #ffffff, #f8fbff);
 				text-align: center;
-				padding: 0.9rem;
+				padding: 1rem;
 				min-height: 130px;
 				box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+				transition:
+					transform 0.2s ease,
+					box-shadow 0.2s ease;
+			}
+			.summary-card::before {
+				content: '';
+				position: absolute;
+				left: 0;
+				top: 0;
+				right: 0;
+				height: 4px;
+				background: linear-gradient(90deg, #0ea5e9, #22d3ee);
+			}
+			.summary-card:hover {
+				transform: translateY(-2px);
+				box-shadow: 0 16px 28px rgba(15, 23, 42, 0.12);
 			}
 			.summary-card small {
 				font-weight: 500;
@@ -105,6 +176,17 @@
 				font-size: 1.9rem;
 				font-weight: 700;
 				letter-spacing: -0.5px;
+				color: #0b335d;
+			}
+			.stat-icon {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				width: 36px;
+				height: 36px;
+				border-radius: 50%;
+				background: rgba(14, 165, 233, 0.1);
+				margin-bottom: 0.35rem;
 			}
 
 			#globeContainer {
@@ -128,7 +210,7 @@
 
 			#earthquakeMap {
 				width: 100%;
-				height: 430px;
+				height: 450px;
 				border-radius: 10px;
 				border: 1px solid rgba(34, 211, 238, 0.35);
 				background: #eaf4ff;
@@ -137,6 +219,8 @@
 			.table-wrap {
 				max-height: 360px;
 				overflow: auto;
+				border-radius: 12px;
+				border: 1px solid #dbeafe;
 			}
 			.badge-critical {
 				background: rgba(255, 68, 68, 0.2);
@@ -162,6 +246,7 @@
 				background: #ffffff !important;
 				color: var(--text) !important;
 				border: 1px solid rgba(14, 165, 233, 0.45) !important;
+				border-radius: 10px !important;
 			}
 			.control-light:focus {
 				box-shadow: 0 0 0 0.2rem rgba(14, 165, 233, 0.2) !important;
@@ -173,6 +258,30 @@
 			}
 			.text-subtle {
 				color: var(--muted);
+			}
+			.feature-card {
+				height: 100%;
+				padding: 1rem;
+				border: 1px solid rgba(14, 165, 233, 0.2);
+				border-radius: 12px;
+				background: linear-gradient(180deg, #ffffff, #f3f9ff);
+			}
+			.feature-card strong {
+				font-size: 0.96rem;
+			}
+			.callout-blue,
+			.callout-green {
+				height: 100%;
+				padding: 1.2rem;
+				border-radius: 12px;
+			}
+			.callout-blue {
+				background: #eff6ff;
+				border-left: 4px solid #0ea5e9;
+			}
+			.callout-green {
+				background: #f0fdf4;
+				border-left: 4px solid #22c55e;
 			}
 
 			.loading {
@@ -236,6 +345,63 @@
 				color: #64748b;
 				opacity: 0.9;
 			}
+			.topbar-actions {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+			}
+
+			@media (max-width: 991.98px) {
+				.topbar {
+					position: static;
+				}
+				.topbar-inner {
+					flex-direction: column;
+					align-items: flex-start !important;
+					gap: 0.6rem;
+				}
+				.topbar-actions {
+					width: 100%;
+					flex-wrap: wrap;
+					justify-content: flex-start;
+				}
+				.clock-box {
+					min-width: 0;
+					text-align: left;
+				}
+				#earthquakeMap {
+					height: 320px;
+				}
+				.hero {
+					text-align: center;
+				}
+			}
+
+			@media (max-width: 575.98px) {
+				.hero {
+					padding-top: 0.8rem;
+				}
+				.summary-card {
+					min-height: 112px;
+				}
+				.summary-value {
+					font-size: 1.55rem;
+				}
+				.hero p {
+					font-size: 0.92rem;
+				}
+				.table-wrap {
+					max-height: 300px;
+				}
+				table {
+					font-size: 0.84rem;
+				}
+				.form-select,
+				.form-control,
+				.btn {
+					font-size: 16px;
+				}
+			}
 		</style>
 	</head>
 	<body>
@@ -247,57 +413,65 @@
 			<p class="mb-0">Loading real-time disaster dashboard...</p>
 		</div>
 
-		<nav
-			class="topbar py-2 px-3 d-flex justify-content-between align-items-center">
-			<div class="d-flex align-items-center">
-				<strong class="brand-font">🌍 EarthquakeWatch</strong>
-				<span class="dot-live"></span>
-			</div>
-			<div class="d-flex align-items-center gap-2">
-				<button
-					id="runRefreshBtn"
-					class="btn btn-info btn-sm fw-semibold"
-					title="Run scripts and refresh dashboard">
-					<i class="bi bi-arrow-repeat me-1"></i>Refresh Dashboard
-				</button>
-				<div class="clock-box">
-					<div
-						id="clockNow"
-						class="clock-time">
-						Loading time...
-					</div>
-					<div
-						id="clockDate"
-						class="clock-date">
-						Loading date...
-					</div>
+		<nav class="topbar py-2 px-3">
+			<div
+				class="topbar-inner d-flex justify-content-between align-items-center">
+				<div class="d-flex align-items-center">
+					<strong class="brand-font brand-chip">🌍 EarthquakeWatch</strong>
+					<span class="dot-live"></span>
 				</div>
-				<a
-					class="btn btn-outline-info btn-sm"
-					href="https://github.com/zafar1162014/earthquake-alert-pipeline"
-					target="_blank"
-					rel="noopener noreferrer"
-					><i class="bi bi-github"></i
-				></a>
+				<div class="topbar-actions">
+					<button
+						id="runRefreshBtn"
+						class="btn btn-info btn-sm fw-semibold"
+						title="Run scripts and refresh dashboard">
+						<i class="bi bi-arrow-repeat me-1"></i>Refresh Dashboard
+					</button>
+					<div class="clock-box">
+						<div
+							id="clockNow"
+							class="clock-time">
+							Loading time...
+						</div>
+						<div
+							id="clockDate"
+							class="clock-date">
+							Loading date...
+						</div>
+					</div>
+					<a
+						class="btn btn-outline-info btn-sm"
+						href="https://github.com/zafar1162014/earthquake-alert-pipeline"
+						target="_blank"
+						rel="noopener noreferrer"
+						><i class="bi bi-github"></i
+					></a>
+				</div>
 			</div>
 		</nav>
 		<div
 			id="runStatus"
 			class="small text-center py-1"
-			style="background: #eff6ff; color: #0369a1; min-height: 22px; border-bottom: 1px solid #dbeafe"></div>
+			style="
+				background: #eff6ff;
+				color: #0369a1;
+				min-height: 22px;
+				border-bottom: 1px solid #dbeafe;
+			"></div>
 
 		<main class="container-fluid py-2">
 			<section class="hero">
-				<h1 class="brand-font">EarthquakeWatch</h1>
-				<div class="text-subtle">
-					Real-Time Disaster Alert Pipeline — Pakistan and Global Monitor
+				<div class="hero-kicker">
+					<i class="bi bi-broadcast-pin"></i> Live Seismic Intelligence
 				</div>
+				<h1 class="brand-font">EarthquakeWatch</h1>
+				<p>Real-Time Disaster Alert Pipeline — Pakistan and Global Monitor</p>
 			</section>
 
 			<section class="row g-2 mb-2">
 				<div class="col-12 col-md-6 col-xl-3">
 					<div class="summary-card">
-						<div><i class="bi bi-globe2 text-info"></i></div>
+						<div class="stat-icon"><i class="bi bi-globe2 text-info"></i></div>
 						<div
 							id="cardTotal"
 							class="summary-value">
@@ -308,7 +482,7 @@
 				</div>
 				<div class="col-12 col-md-6 col-xl-3">
 					<div class="summary-card">
-						<div>
+						<div class="stat-icon">
 							<i
 								class="bi bi-geo-alt-fill"
 								style="color: var(--green)"></i>
@@ -323,7 +497,7 @@
 				</div>
 				<div class="col-12 col-md-6 col-xl-3">
 					<div class="summary-card">
-						<div>
+						<div class="stat-icon">
 							<i
 								class="bi bi-exclamation-triangle-fill"
 								style="color: var(--red)"></i>
@@ -338,7 +512,7 @@
 				</div>
 				<div class="col-12 col-md-6 col-xl-3">
 					<div class="summary-card">
-						<div>
+						<div class="stat-icon">
 							<i
 								class="bi bi-exclamation-circle-fill"
 								style="color: var(--orange)"></i>
@@ -354,27 +528,45 @@
 			</section>
 
 			<section class="panel">
-			<h5 class="mb-2 text-info" style="font-size: 1.3rem; font-weight: 600; letter-spacing: 0.3px;">🌍 About EarthquakeWatch</h5>
-			<p class="mb-3" style="font-size: 0.95rem; line-height: 1.7; color: var(--muted);">
-				EarthquakeWatch is your trusted partner for real-time earthquake monitoring and instant disaster alerts. We provide critical seismic intelligence to communities, governments, and organizations across Pakistan and globally, enabling timely emergency response and life-saving decisions.
-			</p>
-			<div class="row g-2">
-				<div class="col-12 col-md-4">
-					<div class="p-3 border border-info rounded" style="background: rgba(14, 165, 233, 0.04); font-size: 0.9rem;">
-						<strong class="text-info d-block mb-2">📡 Live Data Feed</strong>
-						Access real-time earthquake data from USGS with instant regional alerts and severity classification.
+				<h5 class="mb-2 text-info">🌍 About EarthquakeWatch</h5>
+				<p
+					class="mb-3"
+					style="font-size: 0.95rem; line-height: 1.7; color: var(--muted)">
+					EarthquakeWatch is your trusted partner for real-time earthquake
+					monitoring and instant disaster alerts. We provide critical seismic
+					intelligence to communities, governments, and organizations across
+					Pakistan and globally, enabling timely emergency response and
+					life-saving decisions.
+				</p>
+				<div class="row g-2">
+					<div class="col-12 col-md-4">
+						<div
+							class="feature-card"
+							style="font-size: 0.9rem">
+							<strong class="text-info d-block mb-2">📡 Live Data Feed</strong>
+							Access real-time earthquake data from USGS with instant regional
+							alerts and severity classification.
+						</div>
 					</div>
-				</div>
-				<div class="col-12 col-md-4">
-					<div class="p-3 border border-info rounded" style="background: rgba(14, 165, 233, 0.04); font-size: 0.9rem;">
-						<strong class="text-info d-block mb-2">⚡ Smart Alerts</strong>
-						Instant notifications for critical earthquakes with impact assessment and risk evaluation.
+					<div class="col-12 col-md-4">
+						<div
+							class="feature-card"
+							style="font-size: 0.9rem">
+							<strong class="text-info d-block mb-2">⚡ Smart Alerts</strong>
+							Instant notifications for critical earthquakes with impact
+							assessment and risk evaluation.
+						</div>
 					</div>
-				</div>
-				<div class="col-12 col-md-4">
-					<div class="p-3 border border-info rounded" style="background: rgba(14, 165, 233, 0.04); font-size: 0.9rem;">
-						<strong class="text-info d-block mb-2">🎯 Detailed Analytics</strong>
-						Comprehensive insights on earthquake patterns, hotspots, and disaster risk assessment.
+					<div class="col-12 col-md-4">
+						<div
+							class="feature-card"
+							style="font-size: 0.9rem">
+							<strong class="text-info d-block mb-2"
+								>🎯 Detailed Analytics</strong
+							>
+							Comprehensive insights on earthquake patterns, hotspots, and
+							disaster risk assessment.
+						</div>
 					</div>
 				</div>
 			</section>
@@ -463,9 +655,7 @@
 			<section class="panel">
 				<div class="d-flex justify-content-between align-items-center mb-2">
 					<h5 class="mb-0 text-info">EarthquakeWatch Live Map</h5>
-					<small class="text-subtle"
-						>Interactive earthquake markers</small
-					>
+					<small class="text-subtle">Interactive earthquake markers</small>
 				</div>
 				<div id="earthquakeMap"></div>
 			</section>
@@ -523,34 +713,66 @@
 			</section>
 
 			<section class="panel">
-				<h5 class="mb-3 text-info" style="font-size: 1.2rem; font-weight: 600;">🔔 Get Real-Time Alerts</h5>
+				<h5 class="mb-3 text-info">🔔 Get Real-Time Alerts</h5>
 				<div class="row g-3">
 					<div class="col-12 col-md-6">
-						<div style="background: #eff6ff; padding: 1.2rem; border-radius: 8px; border-left: 4px solid #0ea5e9;">
-							<h6 class="text-info mb-2" style="font-weight: 600;">Enable Browser Notifications</h6>
-							<p style="font-size: 0.9rem; margin-bottom: 0.8rem; color: var(--muted);">
-								Stay informed with instant push notifications when critical earthquakes occur. Get alerts directly to your device without missing important seismic events.
+						<div class="callout-blue">
+							<h6
+								class="text-info mb-2"
+								style="font-weight: 600">
+								Enable Browser Notifications
+							</h6>
+							<p
+								style="
+									font-size: 0.9rem;
+									margin-bottom: 0.8rem;
+									color: var(--muted);
+								">
+								Stay informed with instant push notifications when critical
+								earthquakes occur. Get alerts directly to your device without
+								missing important seismic events.
 							</p>
-							<button id="enableNotificationsBtn" class="btn btn-info btn-sm" style="font-weight: 500;">
+							<button
+								id="enableNotificationsBtn"
+								class="btn btn-info btn-sm"
+								style="font-weight: 500">
 								<i class="bi bi-bell me-1"></i>Enable Now
 							</button>
-							<div id="notificationStatus" class="small mt-2 text-subtle">Notifications are currently off.</div>
+							<div
+								id="notificationStatus"
+								class="small mt-2 text-subtle">
+								Notifications are currently off.
+							</div>
 						</div>
 					</div>
 					<div class="col-12 col-md-6">
-						<div style="background: #f0fdf4; padding: 1.2rem; border-radius: 8px; border-left: 4px solid #22c55e;">
-							<h6 style="color: #22c55e; margin-bottom: 0.8rem; font-weight: 600;">✓ Smart Filtering</h6>
-							<p style="font-size: 0.9rem; margin-bottom: 0.8rem; color: var(--muted);">
-								Use filters above to customize your alert preferences. Monitor specific regions, set magnitude thresholds, and track high-risk areas relevant to you.
+						<div class="callout-green">
+							<h6
+								style="color: #22c55e; margin-bottom: 0.8rem; font-weight: 600">
+								✓ Smart Filtering
+							</h6>
+							<p
+								style="
+									font-size: 0.9rem;
+									margin-bottom: 0.8rem;
+									color: var(--muted);
+								">
+								Use filters above to customize your alert preferences. Monitor
+								specific regions, set magnitude thresholds, and track high-risk
+								areas relevant to you.
 							</p>
-							<small style="color: #16a34a;">Receive only the alerts you care about</small>
+							<small style="color: #16a34a"
+								>Receive only the alerts you care about</small
+							>
 						</div>
 					</div>
 				</div>
 			</section>
 
 			<section class="panel text-center">
-				<h5 class="text-info" style="font-size: 1.2rem; font-weight: 600;">
+				<h5
+					class="text-info"
+					style="font-size: 1.2rem; font-weight: 600">
 					Parallel Processing Benchmark — Amdahl Law Validation
 				</h5>
 				<img
@@ -642,9 +864,10 @@
 			function syncNotificationUI() {
 				const button = document.getElementById('enableNotificationsBtn');
 				if (!button) return;
-				if (!("Notification" in window)) {
+				if (!('Notification' in window)) {
 					button.disabled = true;
-					button.innerHTML = '<i class="bi bi-bell-slash me-1"></i>Not Supported';
+					button.innerHTML =
+						'<i class="bi bi-bell-slash me-1"></i>Not Supported';
 					setNotificationStatus('This browser does not support notifications.');
 					return;
 				}
@@ -653,24 +876,31 @@
 				if (permission === 'granted' && notificationState.enabled) {
 					button.disabled = false;
 					button.innerHTML = '<i class="bi bi-bell-fill me-1"></i>Enabled';
-					setNotificationStatus('Notifications are enabled. New critical earthquakes will alert instantly.');
+					setNotificationStatus(
+						'Notifications are enabled. New critical earthquakes will alert instantly.',
+					);
 					return;
 				}
 
 				if (permission === 'denied') {
 					button.disabled = true;
 					button.innerHTML = '<i class="bi bi-bell-slash me-1"></i>Blocked';
-					setNotificationStatus('Notifications are blocked in browser settings.');
+					setNotificationStatus(
+						'Notifications are blocked in browser settings.',
+					);
 					return;
 				}
 
 				button.disabled = false;
 				button.innerHTML = '<i class="bi bi-bell me-1"></i>Enable Now';
-				setNotificationStatus('Notifications are currently off. Click Enable Now.');
+				setNotificationStatus(
+					'Notifications are currently off. Click Enable Now.',
+				);
 			}
 
 			function loadNotificationState() {
-				notificationState.enabled = localStorage.getItem(NOTIFY_ENABLED_KEY) === '1';
+				notificationState.enabled =
+					localStorage.getItem(NOTIFY_ENABLED_KEY) === '1';
 				notificationState.lastSeenMillis = Number(
 					localStorage.getItem(NOTIFY_LAST_SEEN_KEY) || 0,
 				);
@@ -750,7 +980,7 @@
 
 			function notifyCriticalEvents(data) {
 				if (!notificationState.enabled) return;
-				if (!("Notification" in window)) return;
+				if (!('Notification' in window)) return;
 				if (Notification.permission !== 'granted') return;
 
 				ensureNotificationBaseline(data);
@@ -759,7 +989,8 @@
 				);
 				const freshCriticalEvents = criticalEvents
 					.filter(
-						(event) => parseTimeMillis(event.time) > notificationState.lastSeenMillis,
+						(event) =>
+							parseTimeMillis(event.time) > notificationState.lastSeenMillis,
 					)
 					.sort((a, b) => parseTimeMillis(a.time) - parseTimeMillis(b.time));
 
@@ -856,10 +1087,9 @@
 			function initMap() {
 				if (typeof L === 'undefined') return;
 				map = L.map('earthquakeMap').setView([24, 30], 2);
-				L.tileLayer(
-					'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-					{ attribution: '&copy; OpenStreetMap contributors' },
-				).addTo(map);
+				L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+					attribution: '&copy; OpenStreetMap contributors',
+				}).addTo(map);
 				mapLayer = L.layerGroup().addTo(map);
 				setTimeout(() => map.invalidateSize(), 200);
 			}
@@ -1093,8 +1323,8 @@
 					options: {
 						plugins: { legend: { display: false } },
 						scales: {
-							x: { ticks: { color: '#fff' } },
-							y: { ticks: { color: '#fff' }, beginAtZero: true },
+							x: { ticks: { color: '#334155' } },
+							y: { ticks: { color: '#334155' }, beginAtZero: true },
 						},
 					},
 				});
@@ -1116,7 +1346,7 @@
 							},
 						],
 					},
-					options: { plugins: { legend: { labels: { color: '#fff' } } } },
+					options: { plugins: { legend: { labels: { color: '#334155' } } } },
 				});
 
 				if (chartFrequency) chartFrequency.destroy();
@@ -1136,10 +1366,10 @@
 						],
 					},
 					options: {
-						plugins: { legend: { labels: { color: '#fff' } } },
+						plugins: { legend: { labels: { color: '#334155' } } },
 						scales: {
-							x: { ticks: { color: '#fff', maxTicksLimit: 7 } },
-							y: { ticks: { color: '#fff' }, beginAtZero: true },
+							x: { ticks: { color: '#334155', maxTicksLimit: 7 } },
+							y: { ticks: { color: '#334155' }, beginAtZero: true },
 						},
 					},
 				});
@@ -1250,7 +1480,8 @@
 				if (!button || !status) return;
 
 				button.disabled = true;
-				button.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Refreshing...';
+				button.innerHTML =
+					'<i class="bi bi-arrow-repeat me-1"></i>Refreshing...';
 				status.textContent = 'Refreshing data and updating dashboard...';
 
 				try {
@@ -1259,13 +1490,34 @@
 						headers: { 'Content-Type': 'application/json' },
 						body: JSON.stringify({ includeBenchmark: false }),
 					});
-					const result = await response.json();
+					let result = {};
+					try {
+						result = await response.json();
+					} catch (_ignored) {
+						result = {};
+					}
 
 					if (result.success) {
 						status.textContent = 'Refresh completed. Reloading dashboard...';
 						await loadDashboard();
 						status.textContent = 'Dashboard updated successfully.';
 					} else {
+						if (response.status === 501) {
+							status.textContent =
+								result.error ||
+								'Refresh is disabled on this deployed environment.';
+							button.disabled = true;
+							button.title = 'Refresh is disabled on deployed serverless mode';
+							button.innerHTML =
+								'<i class="bi bi-cloud-slash me-1"></i>Refresh Disabled';
+							return;
+						}
+
+						if (result.error) {
+							status.textContent = result.error;
+							return;
+						}
+
 						const firstFailed = (result.results || []).find(
 							(item) => !item.success,
 						);
@@ -1275,9 +1527,23 @@
 					console.error('Refresh failed', error);
 					status.textContent = 'Failed to refresh dashboard data.';
 				} finally {
-					button.disabled = false;
-					button.innerHTML =
-						'<i class="bi bi-arrow-repeat me-1"></i>Refresh Dashboard';
+					if (!button.innerHTML.includes('Refresh Disabled')) {
+						button.disabled = false;
+						button.innerHTML =
+							'<i class="bi bi-arrow-repeat me-1"></i>Refresh Dashboard';
+					}
+				}
+			}
+
+			function setupDeployedRefreshHint() {
+				const button = document.getElementById('runRefreshBtn');
+				const status = document.getElementById('runStatus');
+				if (!button || !status) return;
+
+				const host = String(window.location.hostname || '');
+				if (host.endsWith('.vercel.app')) {
+					status.textContent =
+						'Deployed mode detected: data refresh scripts run locally only.';
 				}
 			}
 
@@ -1314,6 +1580,7 @@
 				setClock();
 				setInterval(setClock, 1000);
 				loadNotificationState();
+				setupDeployedRefreshHint();
 
 				bindUI();
 				initMap();
