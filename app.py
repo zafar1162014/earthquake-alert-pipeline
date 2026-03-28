@@ -223,7 +223,7 @@ def api_refresh_run():
         return jsonify(
             {
                 "success": all_success,
-                "message": "Refresh completed" if all_success else "Refresh finished with errors",
+                "message": "Refresh completed" if all_success else "Refresh could not complete. Check script logs locally.",
                 "results": results,
             }
         ), (200 if all_success else 500)

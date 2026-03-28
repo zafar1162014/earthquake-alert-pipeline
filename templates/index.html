@@ -1537,7 +1537,9 @@
 						const firstFailed = (result.results || []).find(
 							(item) => !item.success,
 						);
-						status.textContent = `Refresh finished with errors${firstFailed ? ` (${firstFailed.script})` : ''}.`;
+						status.textContent = firstFailed
+							? `Refresh could not complete (${firstFailed.script}). Run scripts locally.`
+							: 'Refresh could not complete in this environment. Run scripts locally.';
 					}
 				} catch (error) {
 					console.error('Refresh failed', error);
