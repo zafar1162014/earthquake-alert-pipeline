@@ -72,6 +72,12 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+For full local pipeline support (Spark + benchmark scripts), install:
+
+```bash
+pip install -r requirements-pipeline.txt
+```
+
 ### Run the Project
 
 1. Download fresh data:
@@ -113,6 +119,7 @@ vercel --prod
 - Vercel runs the Flask app from `app.py` via `@vercel/python`.
 - `/api/refresh-run` is disabled on Vercel serverless (returns HTTP 501). Run refresh scripts locally when needed.
 - Ensure `data/earthquakes.csv` exists in the repository before deployment.
+- `requirements.txt` is intentionally runtime-only for Vercel; use `requirements-pipeline.txt` for full local Spark workflows.
 
 ## API Endpoints
 

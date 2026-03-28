@@ -1,5 +1,3 @@
+flask
 pandas
 requests
-pyspark
-matplotlib
-flask
