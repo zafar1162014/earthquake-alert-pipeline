@@ -98,6 +98,8 @@ python app.py
 
 This repository is ready for Vercel deployment using the included `vercel.json`.
 
+Live App: https://earthquakewatch.vercel.app
+
 ### 1. Commit and push
 
 ```bash
