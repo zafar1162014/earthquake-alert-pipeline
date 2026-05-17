@@ -178,3 +178,23 @@ git commit -m "chore: ignore generated DOCX and document cleanup"
 ```
 
 If you want me to push the commit, tell me and I'll run `git push`.
+
+
+## Parallel Processing Benchmark — Amdahl Law Validation
+
+The repository includes a Spark Amdahl benchmark that measures actual speedup vs theoretical Amdahl's Law (P=0.85). The generated chart is:
+
+- `docs/screenshots/speedup_chart.png`
+
+To reproduce locally:
+
+```bash
+mkdir -p /tmp/earthquake_tmp
+export TMPDIR=/tmp/earthquake_tmp
+python3 scripts/07_amdahl.py
+```
+
+Dashboard screenshots used in README are taken from a local run at `http://127.0.0.1:5001/`:
+
+- `docs/screenshots/live-01-dashboard-home.png`
+- `docs/screenshots/live-02-api-summary.png`
