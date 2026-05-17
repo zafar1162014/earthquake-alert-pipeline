@@ -164,3 +164,17 @@ Screenshots are available in [docs/screenshots](docs/screenshots).
 ## License
 
 This repository is intended for educational and demonstration use.
+
+## Notes about repository cleanup
+
+- The generated submission `EarthquakeWatch_PDC_Documentation.docx` is ignored via `.gitignore` to avoid committing large binary artifacts.
+- Intermediate proof artifacts and temporary files were cleaned from `docs/screenshots/`. The canonical terminal proof is `docs/screenshots/terminal-hdfs-spark-combined.png`.
+
+To stage and commit the README and `.gitignore` changes:
+
+```bash
+git add .gitignore README.md
+git commit -m "chore: ignore generated DOCX and document cleanup"
+```
+
+If you want me to push the commit, tell me and I'll run `git push`.

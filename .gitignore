@@ -9,3 +9,5 @@ output/
 data/earthquakes.csv
 .DS_Store
 .vscode/
+# Ignore generated DOCX submission artifact
+EarthquakeWatch_PDC_Documentation.docx
