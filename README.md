@@ -186,6 +186,10 @@ The repository includes a Spark Amdahl benchmark that measures actual speedup vs
 
 - `docs/screenshots/speedup_chart.png`
 
+![Amdahl speedup chart](docs/screenshots/speedup_chart.png)
+
+This chart compares actual Spark speedup with the theoretical Amdahl prediction (P = 0.85). Run `python3 scripts/07_amdahl.py` to generate an updated `output/speedup_chart.png` from your environment.
+
 To reproduce locally:
 
 ```bash
