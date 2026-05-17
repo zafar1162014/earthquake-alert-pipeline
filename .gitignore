@@ -11,3 +11,6 @@ data/earthquakes.csv
 .vscode/
 # Ignore generated DOCX submission artifact
 EarthquakeWatch_PDC_Documentation.docx
+
+# Ignore Office editor temp files
+~$*
