@@ -1,13 +1,66 @@
-# Find earthquake hotspots by dividing the map into a grid
-# Earthquakes are grouped by location, and high-activity areas are marked as CRITICAL/HIGH risk
+# Find earthquake hotspots by dividing the map into a grid.
+# Defaults to HDFS paths, with CLI overrides for local Spark verification.
+
+import argparse
+from pathlib import Path
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, count, round, when
 
 
-INPUT_PATH = "/earthquake/input/earthquakes.csv"
-GLOBAL_OUTPUT_PATH = "/earthquake/output/hotspots/global"
-PAKISTAN_OUTPUT_PATH = "/earthquake/output/hotspots/pakistan"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_INPUT_PATH = "/earthquake/input/earthquakes.csv"
+DEFAULT_OUTPUT_BASE = "/earthquake/output/hotspots"
+
+
+def is_uri(path_value: str) -> bool:
+    return "://" in path_value
+
+
+def normalize_spark_path(path_value: str) -> str:
+    if is_uri(path_value) or path_value.startswith("/earthquake/"):
+        return path_value
+
+    path = Path(path_value).expanduser()
+    if not path.is_absolute():
+        path = PROJECT_ROOT / path
+    return str(path.resolve())
+
+
+def join_spark_path(base_path: str, *parts: str) -> str:
+    return "/".join([base_path.rstrip("/"), *parts])
+
+
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(description="Run Spark earthquake hotspot detection.")
+    parser.add_argument(
+        "--input",
+        default=DEFAULT_INPUT_PATH,
+        help="Input CSV path. Defaults to HDFS /earthquake/input/earthquakes.csv.",
+    )
+    parser.add_argument(
+        "--output-base",
+        default=DEFAULT_OUTPUT_BASE,
+        help="Base output path. Defaults to HDFS /earthquake/output/hotspots.",
+    )
+    parser.add_argument(
+        "--master",
+        default=None,
+        help="Optional Spark master, for example local[*] for local verification.",
+    )
+    args = parser.parse_args(argv)
+    args.input = normalize_spark_path(args.input)
+    args.output_base = normalize_spark_path(args.output_base)
+    args.global_output_path = join_spark_path(args.output_base, "global")
+    args.pakistan_output_path = join_spark_path(args.output_base, "pakistan")
+    return args
+
+
+def create_spark_session(master=None):
+    builder = SparkSession.builder.appName("EarthquakeHotspotDetection")
+    if master:
+        builder = builder.master(master)
+    return builder.getOrCreate()
 
 
 def add_risk_level(hotspots_df):
@@ -46,8 +99,9 @@ def create_grid_and_count(df, region_filter=None):
     return add_risk_level(hotspots)
 
 
-def main() -> None:
-    spark = SparkSession.builder.appName("EarthquakeHotspotDetection").getOrCreate()
+def main(argv=None) -> None:
+    args = parse_args(argv)
+    spark = create_spark_session(args.master)
 
     print("\n" + "=" * 50)
     print("  EARTHQUAKE HOTSPOT DETECTION")
@@ -58,7 +112,7 @@ def main() -> None:
         spark.read
         .option("header", True)
         .option("inferSchema", True)
-        .csv(INPUT_PATH)
+        .csv(args.input)
     )
 
     # Find global hotspots
@@ -76,12 +130,12 @@ def main() -> None:
     pakistan_hotspots.limit(5).show(truncate=False)
 
     # Save results
-    print("\nSaving results to HDFS...")
-    global_hotspots.write.mode("overwrite").option("header", True).csv(GLOBAL_OUTPUT_PATH)
-    pakistan_hotspots.write.mode("overwrite").option("header", True).csv(PAKISTAN_OUTPUT_PATH)
+    print("\nSaving Spark results...")
+    global_hotspots.write.mode("overwrite").option("header", True).csv(args.global_output_path)
+    pakistan_hotspots.write.mode("overwrite").option("header", True).csv(args.pakistan_output_path)
 
-    print(f"✓ Global hotspots  → {GLOBAL_OUTPUT_PATH}")
-    print(f"✓ Pakistan hotspots → {PAKISTAN_OUTPUT_PATH}\n")
+    print(f"✓ Global hotspots  → {args.global_output_path}")
+    print(f"✓ Pakistan hotspots → {args.pakistan_output_path}\n")
 
     spark.stop()
 

@@ -1,11 +1,59 @@
 # Analyze earthquake data using Spark batch processing
-# Reads from HDFS and outputs results by magnitude, region, location, and Pakistan stats
+# Defaults to HDFS paths, with CLI overrides for local Spark verification.
+
+import argparse
+from pathlib import Path
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import avg, col, count, lit, max as spark_max, min as spark_min, when
 
-INPUT_PATH = "/earthquake/input/earthquakes.csv"
-OUTPUT_BASE = "/earthquake/output/batch"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_INPUT_PATH = "/earthquake/input/earthquakes.csv"
+DEFAULT_OUTPUT_BASE = "/earthquake/output/batch"
+
+
+def is_uri(path_value: str) -> bool:
+    return "://" in path_value
+
+
+def normalize_spark_path(path_value: str) -> str:
+    if is_uri(path_value) or path_value.startswith("/earthquake/"):
+        return path_value
+
+    path = Path(path_value).expanduser()
+    if not path.is_absolute():
+        path = PROJECT_ROOT / path
+    return str(path.resolve())
+
+
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(description="Run Spark batch analysis for earthquake data.")
+    parser.add_argument(
+        "--input",
+        default=DEFAULT_INPUT_PATH,
+        help="Input CSV path. Defaults to HDFS /earthquake/input/earthquakes.csv.",
+    )
+    parser.add_argument(
+        "--output-base",
+        default=DEFAULT_OUTPUT_BASE,
+        help="Base output path. Defaults to HDFS /earthquake/output/batch.",
+    )
+    parser.add_argument(
+        "--master",
+        default=None,
+        help="Optional Spark master, for example local[*] for local verification.",
+    )
+    args = parser.parse_args(argv)
+    args.input = normalize_spark_path(args.input)
+    args.output_base = normalize_spark_path(args.output_base)
+    return args
+
+
+def create_spark_session(master=None):
+    builder = SparkSession.builder.appName("EarthquakeBatchAnalysis")
+    if master:
+        builder = builder.master(master)
+    return builder.getOrCreate()
 
 
 def analyze_by_magnitude(df):
@@ -77,14 +125,15 @@ def analyze_pakistan(df):
     return pakistan_stats
 
 
-def main() -> None:
-    spark = SparkSession.builder.appName("EarthquakeBatchAnalysis").getOrCreate()
+def main(argv=None) -> None:
+    args = parse_args(argv)
+    spark = create_spark_session(args.master)
 
     df = (
         spark.read
         .option("header", True)
         .option("inferSchema", True)
-        .csv(INPUT_PATH)
+        .csv(args.input)
     )
 
     print("\n" + "=" * 50)
@@ -101,13 +150,13 @@ def main() -> None:
     pakistan_stats = analyze_pakistan(df)
 
     # Save results to HDFS
-    print("\nSaving results to HDFS...")
-    mag_ranges.write.mode("overwrite").option("header", True).csv(f"{OUTPUT_BASE}/mag_ranges")
-    region_counts.write.mode("overwrite").option("header", True).csv(f"{OUTPUT_BASE}/region_counts")
-    top_places.write.mode("overwrite").option("header", True).csv(f"{OUTPUT_BASE}/top_places")
-    pakistan_stats.write.mode("overwrite").option("header", True).csv(f"{OUTPUT_BASE}/pakistan_stats")
+    print("\nSaving Spark results...")
+    mag_ranges.write.mode("overwrite").option("header", True).csv(f"{args.output_base}/mag_ranges")
+    region_counts.write.mode("overwrite").option("header", True).csv(f"{args.output_base}/region_counts")
+    top_places.write.mode("overwrite").option("header", True).csv(f"{args.output_base}/top_places")
+    pakistan_stats.write.mode("overwrite").option("header", True).csv(f"{args.output_base}/pakistan_stats")
 
-    print(f"✓ Results saved to: {OUTPUT_BASE}/\n")
+    print(f"✓ Results saved to: {args.output_base}/\n")
 
     spark.stop()
 

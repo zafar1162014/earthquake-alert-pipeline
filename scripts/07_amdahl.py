@@ -2,6 +2,9 @@ import os
 import time
 from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+os.environ.setdefault("MPLCONFIGDIR", str(PROJECT_ROOT / "tmp" / "matplotlib"))
+
 import matplotlib.pyplot as plt
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import avg, col, count, lit, when
@@ -25,9 +28,8 @@ def theoretical_speedup(cores: int, parallel_fraction: float = PARALLEL_FRACTION
 
 def run_spark_job(core_count: int) -> float:
     # Run the analysis job with a specific number of cores and return execution time
-    project_root = Path(__file__).resolve().parents[1]
-    input_path = str(project_root / "data" / "earthquakes.csv")
-    tmp_dir = project_root / "tmp"
+    input_path = str(PROJECT_ROOT / "data" / "earthquakes.csv")
+    tmp_dir = PROJECT_ROOT / "tmp"
     tmp_dir.mkdir(parents=True, exist_ok=True)
 
     spark = (
@@ -138,8 +140,7 @@ def save_chart(output_file: Path, times: dict[int, float], speedups: dict[int, f
 
 
 def main() -> None:
-    project_root = Path(__file__).resolve().parents[1]
-    tmp_dir = project_root / "tmp"
+    tmp_dir = PROJECT_ROOT / "tmp"
     tmp_dir.mkdir(parents=True, exist_ok=True)
     os.environ["TMPDIR"] = str(tmp_dir)
 
@@ -166,7 +167,7 @@ def main() -> None:
     }
 
     # Save chart and print results
-    output_dir = project_root / "output"
+    output_dir = PROJECT_ROOT / "output"
     output_dir.mkdir(parents=True, exist_ok=True)
     chart_path = output_dir / "speedup_chart.png"
 
@@ -178,10 +179,6 @@ def main() -> None:
     print(f"  • 2 cores achieved {actual_speedups[2]:.2f}x speedup (theory: {theoretical_speedup(2):.2f}x)")
     print(f"  • 4 cores achieved {actual_speedups[4]:.2f}x speedup (theory: {theoretical_speedup(4):.2f}x)")
     print(f"  • Gap between actual and theory shows overhead from parallelization\n")
-
-
-if __name__ == "__main__":
-    main()
 
 
 if __name__ == "__main__":

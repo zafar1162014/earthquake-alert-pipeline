@@ -1,198 +1,433 @@
 # EarthquakeWatch
 
-EarthquakeWatch is a real-time earthquake monitoring pipeline and dashboard built with Flask, pandas, and PySpark. It combines historical and near-live processing workflows to support data collection, analysis, hotspot detection, and alert generation.
+EarthquakeWatch is an earthquake monitoring pipeline and dashboard for global and Pakistan-focused seismic events. It combines a Flask web dashboard, USGS data collection, Hadoop HDFS storage, PySpark batch analytics, Spark streaming alerts, and an Amdahl's Law benchmark.
 
-## Overview
+## How It Works
 
-This project is designed to:
+1. `scripts/01_download_data.py` downloads earthquake CSV data from the USGS API and writes `data/earthquakes.csv`.
+2. `scripts/02_upload_hdfs.sh` verifies Hadoop HDFS and uploads the CSV to `/earthquake/input/earthquakes.csv`.
+3. `scripts/03_batch_analysis.py` runs Spark batch analytics for magnitude ranges, regions, top places, and Pakistan statistics.
+4. `scripts/04_hotspot.py` runs Spark hotspot detection by latitude/longitude grid.
+5. `scripts/05_stream_feed.py` simulates a live socket feed from the CSV.
+6. `scripts/06_stream_alert.py` consumes that socket feed with Spark Structured Streaming and writes critical alerts.
+7. `scripts/07_amdahl.py` runs the Spark speedup benchmark and writes `output/speedup_chart.png`.
+8. `app.py` serves the Flask dashboard and JSON APIs from the local CSV and generated output chart.
 
-- Collect earthquake data from the USGS feed.
-- Process and classify records for global and Pakistan-focused analysis.
-- Present interactive visualizations through a web dashboard.
-- Run Spark batch analytics for trends and hotspot summaries.
-- Simulate streaming alerts using socket-based feed and Spark streaming logic.
-- Compare theoretical versus practical speedup using Amdahl's Law.
+HDFS is the main distributed storage path. The Spark batch and hotspot scripts also support local file paths for development and verification when Hadoop services are not running.
 
-## Key Features
+## Project Structure
 
-- Flask dashboard with summary cards, charts, map layers, and tables.
-- REST API endpoints for summary, regional filtering, recent events, and hotspots.
-- Modular script pipeline for data download, batch jobs, streaming, and benchmarking.
-- Optional Hadoop HDFS integration for distributed storage workflows.
+```text
+app.py                         Flask dashboard and API routes
+data/earthquakes.csv           Local earthquake dataset
+output/speedup_chart.png       Generated Amdahl benchmark chart
+scripts/01_download_data.py    Download USGS earthquake data
+scripts/02_upload_hdfs.sh      Verify Hadoop and upload CSV to HDFS
+scripts/03_batch_analysis.py   Spark batch analysis
+scripts/04_hotspot.py          Spark hotspot analysis
+scripts/05_stream_feed.py      Socket stream simulator
+scripts/06_stream_alert.py     Spark streaming alert consumer
+scripts/07_amdahl.py           Spark Amdahl benchmark
+templates/index.html           Dashboard UI
+tests/                         Unit tests for pipeline helpers/config
+```
 
-## Tech Stack
-
-- Python
-- Flask
-- pandas
-- requests
-- PySpark
-- matplotlib
-- Hadoop HDFS (optional)
-- Leaflet, Chart.js, Three.js
-
-## Repository Structure
-
-- `app.py`: Flask application and API routes.
-- `requirements.txt`: Project dependencies.
-- `data/earthquakes.csv`: Primary dataset used by dashboard and scripts.
-- `output/`: Generated assets such as benchmark charts.
-- `scripts/`: Data and analytics pipeline scripts.
-- `templates/index.html`: Dashboard front-end template.
-- `docs/screenshots/`: Dashboard screenshots.
-
-## Pipeline Scripts
-
-- `scripts/01_download_data.py`: Download and prepare earthquake CSV data.
-- `scripts/02_upload_hdfs.sh`: Upload prepared data to HDFS.
-- `scripts/03_batch_analysis.py`: Run Spark batch analysis.
-- `scripts/04_hotspot.py`: Detect hotspot cells using coordinate grids.
-- `scripts/05_stream_feed.py`: Stream CSV rows over socket.
-- `scripts/06_stream_alert.py`: Consume stream and classify alerts in Spark.
-- `scripts/07_amdahl.py`: Generate Amdahl speedup comparison.
-
-## Getting Started
-
-### Prerequisites
+## Requirements
 
 - Python 3.10+
-- Java (required for PySpark)
-- Apache Spark (required for Spark scripts)
-- Hadoop (optional, for HDFS workflow)
+- Java/JDK, required by Hadoop and Spark
+- Hadoop, required for the HDFS workflow
+- Apache Spark or PySpark, required for Spark scripts
+- Python packages from `requirements.txt` and `requirements-pipeline.txt`
 
-### Installation
+This repository already separates dashboard runtime dependencies from heavier local pipeline dependencies:
 
-1. Clone the repository.
-2. Create and activate a virtual environment.
-3. Install dependencies.
+- `requirements.txt`: Flask dashboard runtime
+- `requirements-pipeline.txt`: PySpark and matplotlib pipeline dependencies
+
+## Install
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-For full local pipeline support (Spark + benchmark scripts), install:
-
-```bash
 pip install -r requirements-pipeline.txt
 ```
 
-### Run the Project
-
-1. Download fresh data:
+Verify the Python packages:
 
 ```bash
-python scripts/01_download_data.py
+.venv/bin/python -m pip freeze | grep -E '^(Flask|pandas|requests|pyspark|matplotlib)=='
 ```
 
-2. Start the dashboard:
+## Run The Dashboard
+
+Download or refresh the CSV:
 
 ```bash
-python app.py
+.venv/bin/python scripts/01_download_data.py
 ```
 
-3. Open the dashboard in your browser at the configured host and port.
+Start Flask:
 
-## Deploy to Vercel
+```bash
+.venv/bin/python app.py
+```
 
-This repository is ready for Vercel deployment using the included `vercel.json`.
+Open:
 
-Live App: https://earthquakewatch.vercel.app
+```text
+http://localhost:5001
+```
 
-### 1. Commit and push
+Useful dashboard APIs:
+
+```bash
+curl http://localhost:5001/api/summary
+curl http://localhost:5001/api/recent
+curl http://localhost:5001/api/hotspots
+curl http://localhost:5001/api/speedup --output speedup_chart.png
+```
+
+## Verify Hadoop HDFS
+
+Check Java:
+
+```bash
+java -version
+```
+
+Check Hadoop commands and default filesystem:
+
+```bash
+command -v hdfs
+hdfs getconf -confKey fs.defaultFS
+```
+
+Expected default filesystem for this project is usually:
+
+```text
+hdfs://localhost:9000
+```
+
+Start Hadoop DFS if it is not running:
+
+```bash
+start-dfs.sh
+```
+
+Verify Hadoop processes:
+
+```bash
+jps
+```
+
+Expected processes include:
+
+```text
+NameNode
+DataNode
+SecondaryNameNode
+```
+
+Verify HDFS is reachable:
+
+```bash
+hdfs dfs -ls /
+```
+
+If this fails with `Connection refused` to `localhost:9000`, Hadoop HDFS is installed but the NameNode is not running or is not listening on the configured port.
+
+## Upload Data To HDFS
+
+After `data/earthquakes.csv` exists and Hadoop is running:
+
+```bash
+bash scripts/02_upload_hdfs.sh
+```
+
+The script creates:
+
+```text
+/earthquake/input
+/earthquake/output
+```
+
+Then it uploads:
+
+```text
+/earthquake/input/earthquakes.csv
+```
+
+Verify manually:
+
+```bash
+hdfs dfs -ls /earthquake/input
+hdfs dfs -du -h /earthquake/input
+```
+
+## Run Spark With Hadoop HDFS
+
+These commands use the default HDFS paths:
+
+```bash
+.venv/bin/python scripts/03_batch_analysis.py
+.venv/bin/python scripts/04_hotspot.py
+```
+
+Expected HDFS outputs:
+
+```text
+/earthquake/output/batch/mag_ranges
+/earthquake/output/batch/region_counts
+/earthquake/output/batch/top_places
+/earthquake/output/batch/pakistan_stats
+/earthquake/output/hotspots/global
+/earthquake/output/hotspots/pakistan
+```
+
+Verify outputs:
+
+```bash
+hdfs dfs -ls /earthquake/output
+hdfs dfs -ls /earthquake/output/batch
+hdfs dfs -ls /earthquake/output/hotspots
+```
+
+## Run Spark Locally Without HDFS
+
+Use local mode when developing or when Hadoop is temporarily unavailable. This still uses Spark, but reads and writes local files instead of HDFS.
+
+```bash
+.venv/bin/python scripts/03_batch_analysis.py \
+  --master 'local[*]' \
+  --input data/earthquakes.csv \
+  --output-base output/batch
+```
+
+```bash
+.venv/bin/python scripts/04_hotspot.py \
+  --master 'local[*]' \
+  --input data/earthquakes.csv \
+  --output-base output/hotspots
+```
+
+Local outputs:
+
+```text
+output/batch/
+output/hotspots/
+```
+
+The scripts convert local relative paths to absolute filesystem paths internally so Spark can read local data even when Hadoop's `fs.defaultFS` points at HDFS.
+
+## Run Streaming Alerts
+
+Use two terminals.
+
+Terminal 1, start the socket feed:
+
+```bash
+.venv/bin/python scripts/05_stream_feed.py
+```
+
+Terminal 2, start Spark streaming:
+
+```bash
+.venv/bin/python scripts/06_stream_alert.py
+```
+
+The streaming job reads from:
+
+```text
+localhost:9999
+```
+
+Critical alert output defaults to HDFS:
+
+```text
+/earthquake/output/streaming/alerts
+/earthquake/output/streaming/checkpoint
+```
+
+Stop both commands with `Ctrl+C`.
+
+## Run The Amdahl Benchmark
+
+```bash
+mkdir -p tmp
+export TMPDIR="$PWD/tmp"
+.venv/bin/python scripts/07_amdahl.py
+```
+
+Generated chart:
+
+```text
+output/speedup_chart.png
+```
+
+The dashboard serves this chart from:
+
+```text
+/api/speedup
+```
+
+## Build And Verification Checklist
+
+Run syntax checks:
+
+```bash
+.venv/bin/python -m py_compile app.py scripts/01_download_data.py scripts/03_batch_analysis.py scripts/04_hotspot.py scripts/05_stream_feed.py scripts/06_stream_alert.py scripts/07_amdahl.py
+```
+
+Run unit tests:
+
+```bash
+.venv/bin/python -m unittest discover -s tests -v
+```
+
+Run Flask API smoke checks:
+
+```bash
+.venv/bin/python - <<'PY'
+from app import app
+client = app.test_client()
+for path in ["/api/summary", "/api/recent", "/api/hotspots", "/api/speedup"]:
+    response = client.get(path)
+    print(path, response.status_code, response.content_type)
+PY
+```
+
+Run local Spark smoke checks:
+
+```bash
+.venv/bin/python scripts/03_batch_analysis.py --master 'local[*]' --input data/earthquakes.csv --output-base output/batch
+.venv/bin/python scripts/04_hotspot.py --master 'local[*]' --input data/earthquakes.csv --output-base output/hotspots
+```
+
+Run Hadoop + Spark verification:
+
+```bash
+start-dfs.sh
+jps
+hdfs dfs -ls /
+bash scripts/02_upload_hdfs.sh
+.venv/bin/python scripts/03_batch_analysis.py
+.venv/bin/python scripts/04_hotspot.py
+hdfs dfs -ls /earthquake/output
+```
+
+## Deploy Dashboard To Vercel
+
+The Flask dashboard can deploy with the included `vercel.json`.
 
 ```bash
 git add .
 git commit -m "Prepare Vercel deployment"
 git push origin main
-```
-
-### 2. Deploy with Vercel CLI
-
-```bash
-npm i -g vercel
-vercel login
 vercel --prod
 ```
 
-### Notes
+Notes:
 
-- Vercel runs the Flask app from `app.py` via `@vercel/python`.
-- `/api/refresh-run` is disabled on Vercel serverless (returns HTTP 501). Run refresh scripts locally when needed.
-- Ensure `data/earthquakes.csv` exists in the repository before deployment.
-- `requirements.txt` is intentionally runtime-only for Vercel; use `requirements-pipeline.txt` for full local Spark workflows.
+- Vercel runs the dashboard only.
+- Hadoop and Spark scripts are local/distributed pipeline commands, not Vercel serverless tasks.
+- `/api/refresh-run` returns HTTP 501 on Vercel because serverless instances should not run local refresh scripts.
+- Ensure `data/earthquakes.csv` exists before deployment.
 
-## API Endpoints
+Live App:
 
-- `GET /`: Dashboard page.
-- `GET /api/summary`: Aggregated totals and magnitude statistics.
-- `GET /api/earthquakes`: Full earthquake dataset with alert levels.
-- `GET /api/hotspots`: Top hotspot cells.
-- `GET /api/pakistan`: Pakistan-only records.
-- `GET /api/recent`: Most recent records.
-- `GET /api/speedup`: Generated benchmark chart.
-- `POST /api/refresh-run`: Trigger data refresh script.
-
-## Screenshots
-
-Screenshots are available in [docs/screenshots](docs/screenshots).
-
-- [Dashboard Overview](docs/screenshots/dashboard-01-overview-v2.png)
-- [Filters and Live Map](docs/screenshots/dashboard-02-filters-map.png)
-- [Charts and Recent Alerts](docs/screenshots/dashboard-03-charts-table.png)
-- [Alerts Section](docs/screenshots/dashboard-04-alerts-table.png)
-- [Amdahl Benchmark](docs/screenshots/dashboard-05-benchmark.png)
-
-![Dashboard Overview](docs/screenshots/dashboard-01-overview-v2.png)
-
-![Filters and Live Map](docs/screenshots/dashboard-02-filters-map.png)
-
-![Charts and Recent Alerts](docs/screenshots/dashboard-03-charts-table.png)
-
-![Alerts Section](docs/screenshots/dashboard-04-alerts-table.png)
-
-![Amdahl Benchmark](docs/screenshots/dashboard-05-benchmark.png)
+```text
+https://earthquakewatch.vercel.app
+```
 
 ## Troubleshooting
 
-- If the dashboard does not load, verify the Flask server is running.
-- If data is missing, rerun `scripts/01_download_data.py`.
-- If Spark jobs fail, verify Java and Spark installation.
-- If HDFS upload fails, confirm Hadoop services are active.
+### HDFS connection refused
+
+Symptom:
+
+```text
+Call From ... to localhost:9000 failed on connection exception: java.net.ConnectException: Connection refused
+```
+
+Fix:
+
+```bash
+start-dfs.sh
+jps
+hdfs dfs -ls /
+```
+
+If `NameNode` is missing from `jps`, Hadoop DFS is not running.
+
+### `jps` command not found
+
+Install a JDK and make sure Java tools are in `PATH`.
+
+```bash
+java -version
+command -v jps
+```
+
+### Spark local Py4J socket error in restricted environments
+
+PySpark opens a local Java gateway socket. If a sandbox blocks localhost sockets, Spark can fail with:
+
+```text
+Py4JNetworkException: Failed to bind to /127.0.0.1
+```
+
+Run Spark commands in a normal terminal or an environment that allows local socket binding.
+
+### Missing CSV
+
+Create the dataset:
+
+```bash
+.venv/bin/python scripts/01_download_data.py
+```
+
+Then verify:
+
+```bash
+ls -lh data/earthquakes.csv
+```
+
+### Missing speedup chart
+
+Generate it:
+
+```bash
+.venv/bin/python scripts/07_amdahl.py
+```
+
+Then verify:
+
+```bash
+ls -lh output/speedup_chart.png
+```
+
+### Matplotlib cache warnings
+
+If matplotlib cannot write to home-directory caches, use the project temp directory:
+
+```bash
+mkdir -p tmp/matplotlib
+export MPLCONFIGDIR="$PWD/tmp/matplotlib"
+```
+
+## Screenshots
+
+Screenshots are available in `docs/screenshots`.
+
+- `docs/screenshots/dashboard-01-overview-v2.png`
+- `docs/screenshots/dashboard-02-filters-map.png`
+- `docs/screenshots/dashboard-03-charts-table.png`
+- `docs/screenshots/dashboard-04-alerts-table.png`
+- `docs/screenshots/dashboard-05-benchmark.png`
+- `docs/screenshots/speedup_chart.png`
 
 ## License
 
 This repository is intended for educational and demonstration use.
-
-## Notes about repository cleanup
-
-- The generated submission `EarthquakeWatch_PDC_Documentation.docx` is ignored via `.gitignore` to avoid committing large binary artifacts.
-- Intermediate proof artifacts and temporary files were cleaned from `docs/screenshots/`. The canonical terminal proof is `docs/screenshots/terminal-hdfs-spark-combined.png`.
-
-<!-- Removed automated staging instructions to keep README concise. Commits are
-handled in the repository history. -->
-
-
-## Parallel Processing Benchmark — Amdahl Law Validation
-
-The repository includes a Spark Amdahl benchmark that measures actual speedup vs theoretical Amdahl's Law (P=0.85). The generated chart is:
-
-- `docs/screenshots/speedup_chart.png`
-
-![Amdahl speedup chart](docs/screenshots/speedup_chart.png)
-
-This chart compares actual Spark speedup with the theoretical Amdahl prediction (P = 0.85). Run `python3 scripts/07_amdahl.py` to generate an updated `output/speedup_chart.png` from your environment.
-
-To reproduce locally:
-
-```bash
-mkdir -p /tmp/earthquake_tmp
-export TMPDIR=/tmp/earthquake_tmp
-python3 scripts/07_amdahl.py
-```
-
-Dashboard screenshots used in README are taken from a local run at `http://127.0.0.1:5001/`:
-
-- `docs/screenshots/live-01-dashboard-home.png`
-- `docs/screenshots/live-02-api-summary.png`
