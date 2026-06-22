@@ -5,6 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 LOCAL_FILE="${PROJECT_ROOT}/data/earthquakes.csv"
+LOCAL_FILE_REL="data/earthquakes.csv"
 HDFS_INPUT_DIR="/earthquake/input"
 HDFS_OUTPUT_DIR="/earthquake/output"
 HDFS_FILE_PATH="${HDFS_INPUT_DIR}/earthquakes.csv"
@@ -81,7 +82,8 @@ echo "✓ Found: ${LOCAL_FILE}"
 # Upload to HDFS
 echo ""
 echo "Uploading to HDFS..."
-hdfs dfs -put -f "${LOCAL_FILE}" "${HDFS_FILE_PATH}"
+cd "${PROJECT_ROOT}"
+hdfs dfs -put -f "${LOCAL_FILE_REL}" "${HDFS_FILE_PATH}"
 echo "✓ Upload complete"
 
 # Verify the file was uploaded
