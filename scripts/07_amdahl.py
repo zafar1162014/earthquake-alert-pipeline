@@ -32,12 +32,15 @@ def run_spark_job(core_count: int) -> float:
     tmp_dir = PROJECT_ROOT / "tmp"
     tmp_dir.mkdir(parents=True, exist_ok=True)
 
+    # Escape spaces for JVM option parsing when project path contains spaces.
+    java_tmp_dir = str(tmp_dir).replace(" ", "\\ ")
+
     spark = (
         SparkSession.builder.master(f"local[{core_count}]")
         .appName(APP_NAME)
         .config("spark.local.dir", str(tmp_dir))
-        .config("spark.driver.extraJavaOptions", f"-Djava.io.tmpdir={tmp_dir}")
-        .config("spark.executor.extraJavaOptions", f"-Djava.io.tmpdir={tmp_dir}")
+        .config("spark.driver.extraJavaOptions", f"-Djava.io.tmpdir={java_tmp_dir}")
+        .config("spark.executor.extraJavaOptions", f"-Djava.io.tmpdir={java_tmp_dir}")
         .getOrCreate()
     )
     spark.sparkContext.setLogLevel("ERROR")
